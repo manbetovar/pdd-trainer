@@ -200,7 +200,20 @@ body.ai-open #aiDrawer{transform:none}
 .ai-quick{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
 .ai-quick .q-btn{font-family:inherit;text-transform:none;letter-spacing:0;font-size:12px;padding:6px 12px;border-radius:14px}
 .ai-msgs{display:flex;flex-direction:column;gap:6px;margin:0 0 10px;flex:1;min-height:0;overflow:auto}
-.ai-m{font-size:13px;line-height:1.45;padding:8px 11px;border-radius:12px;white-space:pre-wrap;word-wrap:break-word;max-width:88%}
+.ai-m{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:12px;word-wrap:break-word;overflow-wrap:anywhere;max-width:88%}
+.ai-m.u,.ai-m.e{white-space:pre-wrap}
+.ai-m.b>*:first-child{margin-top:0}
+.ai-m.b>*:last-child{margin-bottom:0}
+.ai-m.b p{margin:0 0 7px}
+.ai-m.b h4{font-family:"Oswald","Golos Text",sans-serif;font-weight:500;font-size:13px;letter-spacing:.02em;color:var(--yellow);margin:12px 0 5px}
+.ai-m.b strong{font-weight:600;color:#fff}
+.ai-m.b em{font-style:italic;opacity:.9}
+.ai-m.b ul,.ai-m.b ol{margin:0 0 7px;padding-left:18px}
+.ai-m.b li{margin:0 0 3px}
+.ai-m.b li::marker{color:var(--yellow)}
+.ai-m.b code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;background:rgba(240,192,32,.14);color:var(--yellow);padding:1px 5px;border-radius:3px}
+.ai-m.b pre{background:rgba(0,0,0,.28);border-radius:var(--r-sm);padding:9px 11px;margin:0 0 7px;overflow-x:auto}
+.ai-m.b pre code{background:none;color:var(--steel-2);padding:0;font-size:11.5px;line-height:1.45}
 .ai-m.u{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
 .ai-m.b{align-self:flex-start;background:rgba(240,238,231,.09);color:#E0E3E5;border-bottom-left-radius:4px}
 .ai-m.e{align-self:flex-start;background:rgba(198,59,49,.16);color:#E5A29C;border:1px solid rgba(198,59,49,.4)}
@@ -1259,13 +1272,54 @@ function aiOnQuestionChange(qid){
   if(ctx&&QBANK[qid])ctx.textContent=QBANK[qid].q;
   aiDrawMsgs();
 }
+/* мини-markdown: экранируем всё, потом размечаем — внешних библиотек нет */
+function mdEscape(s){
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function mdInline(s){
+  return s
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s.,;:)!?]|$)/g,"$1<em>$2</em>")
+    .replace(/(^|[\s(])_([^_\n]+)_(?=[\s.,;:)!?]|$)/g,"$1<em>$2</em>");
+}
+function mdRender(src){
+  var out=[],list=null,code=null;
+  mdEscape(src).split("\n").forEach(function(line){
+    if(/^\s*```/.test(line)){
+      if(code===null){code=[];}
+      else{out.push("<pre><code>"+code.join("\n")+"</code></pre>");code=null;}
+      return;
+    }
+    if(code!==null){code.push(line);return;}
+    var m;
+    if((m=line.match(/^\s*(?:[-*•])\s+(.*)$/))||(m=line.match(/^\s*\d+[.)]\s+(.*)$/))){
+      var ordered=/^\s*\d/.test(line);
+      if(list!==(ordered?"ol":"ul")){
+        if(list)out.push("</"+list+">");
+        list=ordered?"ol":"ul";
+        out.push("<"+list+">");
+      }
+      out.push("<li>"+mdInline(m[1])+"</li>");
+      return;
+    }
+    if(list){out.push("</"+list+">");list=null;}
+    if((m=line.match(/^\s*#{1,6}\s+(.*)$/))){out.push("<h4>"+mdInline(m[1])+"</h4>");return;}
+    if(!line.trim()){return;}
+    out.push("<p>"+mdInline(line)+"</p>");
+  });
+  if(code!==null)out.push("<pre><code>"+code.join("\n")+"</code></pre>");
+  if(list)out.push("</"+list+">");
+  return out.join("");
+}
 function aiDrawMsgs(){
   var box=$("aiMsgs");box.innerHTML="";
   (aiHist[aiQid]||[]).forEach(function(m){
     if(m.hidden)return;
     var d=document.createElement("div");
     d.className="ai-m "+(m.role==="user"?"u":(m.error?"e":"b"));
-    d.textContent=m.content;
+    if(m.role==="user"||m.error||m.temp)d.textContent=m.content;
+    else d.innerHTML=mdRender(m.content);
     box.appendChild(d);
   });
   box.scrollTop=box.scrollHeight;
