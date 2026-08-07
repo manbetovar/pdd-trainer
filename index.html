@@ -1215,11 +1215,11 @@ Array.prototype.forEach.call(document.querySelectorAll(".qlink a[data-topic]"),f
 
 /* ── AI chat ───────────────────────────── */
 var AI_PRESETS={
-  anthropic:{base:"https://api.anthropic.com",format:"anthropic",model:"claude-sonnet-5",
-    models:[{id:"claude-sonnet-5",label:"Claude Sonnet 5 — баланс цены и ума"},
-            {id:"claude-haiku-4-5-20251001",label:"Claude Haiku 4.5 — быстрая и дешёвая"},
-            {id:"claude-opus-5",label:"Claude Opus 5 — самая умная"}],
-    hint:'Ключ Anthropic: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Платный, но дешёвый в этом объёме.'},
+  anthropic:{base:"https://api.anthropic.com",format:"anthropic",model:"claude-haiku-4-5",
+    models:[{id:"claude-haiku-4-5",label:"Claude Haiku 4.5 — быстрая, ~$0,002 за разбор"},
+            {id:"claude-sonnet-5",label:"Claude Sonnet 5 — умнее, втрое дороже"},
+            {id:"claude-opus-5",label:"Claude Opus 5 — самая умная, дорогая"}],
+    hint:'Ключ Anthropic: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Платный, но Haiku хватает: ~500 разборов на доллар. Ключ хранится только в этом браузере.'},
   zai:{base:"https://api.z.ai/api/anthropic",format:"anthropic",model:"glm-4.5-flash",
     models:[{id:"glm-4.5-flash",label:"GLM-4.5 Flash — бесплатная, стабильная"},
             {id:"glm-4.7-flash",label:"GLM-4.7 Flash — бесплатная, бывает занята"},
