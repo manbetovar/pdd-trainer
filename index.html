@@ -96,7 +96,17 @@ a{color:inherit}
 .mode{font-family:"Oswald","Golos Text",sans-serif;font-size:14px;letter-spacing:.05em;text-transform:uppercase;background:transparent;border:1px solid var(--hair);color:var(--muted);padding:10px 18px;border-radius:var(--r-sm);cursor:pointer;transition:border-color .15s,background .15s,color .15s}
 .mode:hover{border-color:var(--ink);color:var(--ink)}
 .mode[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--concrete)}
-.groups{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 22px}
+.gbar{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;margin:0 0 14px}
+.gbar .modes{margin:0}
+.gpick{position:relative;flex:1;min-width:280px;max-width:640px}
+.gsel{display:flex;align-items:center;gap:10px;width:100%;height:100%;text-align:left;font-family:inherit;font-size:14px;background:var(--concrete-2);border:1px solid var(--hair);color:var(--ink);padding:10px 14px;border-radius:var(--r-sm);cursor:pointer;transition:border-color .15s}
+.gsel:hover{border-color:var(--ink)}
+.gsel-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.gsel-n{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);flex:none}
+.gsel-chev{width:16px;height:16px;stroke:var(--muted);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none;margin-left:auto;transition:transform .15s}
+.gsel[aria-expanded="true"] .gsel-chev{transform:rotate(180deg)}
+.groups{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:45;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;background:var(--concrete);border:1px solid var(--hair);border-radius:var(--r-lg);box-shadow:0 14px 40px rgba(26,28,30,.18);padding:14px;max-height:min(480px,60vh);overflow:auto}
+.groups[hidden]{display:none}
 .chip{font-family:inherit;font-size:13px;background:var(--concrete-2);border:1px solid var(--hair);color:var(--ink-2);padding:8px 13px;border-radius:var(--r-sm);cursor:pointer;transition:border-color .15s,background .15s,color .15s;text-align:left}
 .chip:hover{border-color:var(--ink)}
 .chip[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--concrete)}
@@ -109,6 +119,8 @@ a{color:inherit}
 
 /* ── quiz ─────────────────────────────── */
 .quiz{background:var(--asphalt);border-radius:var(--r-lg);padding:24px;box-shadow:0 10px 32px rgba(26,28,30,.16);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px}
+.quiz.nomedia{grid-template-columns:1fr}
+.quiz.nomedia .q-media{display:none}
 .media-tabs{display:flex;gap:6px;margin-bottom:10px}
 .media-tabs[hidden]{display:none}
 .m-tab{font-family:"Oswald","Golos Text",sans-serif;font-size:11px;letter-spacing:.07em;text-transform:uppercase;background:transparent;color:var(--steel);border:1px solid var(--hair-d);padding:7px 12px;border-radius:var(--r-sm);cursor:pointer}
@@ -266,11 +278,20 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
   <h2 style="margin-bottom:4px">Тренировка</h2>
   <p class="total" id="heroStat"></p>
 
-  <nav class="modes" id="modes" aria-label="Режим">
-    <button class="mode" data-m="0">По темам</button>
-    <button class="mode" data-m="1">По билетам</button>
-  </nav>
-  <nav class="groups" id="groups" aria-label="Группы вопросов"></nav>
+  <div class="gbar">
+    <nav class="modes" id="modes" aria-label="Режим">
+      <button class="mode" data-m="0">По темам</button>
+      <button class="mode" data-m="1">По билетам</button>
+    </nav>
+    <div class="gpick">
+      <button class="gsel" id="gsel" aria-haspopup="true" aria-expanded="false">
+        <span class="gsel-name" id="gselName"></span>
+        <span class="gsel-n" id="gselN"></span>
+        <svg class="gsel-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <nav class="groups" id="groups" aria-label="Группы вопросов" hidden></nav>
+    </div>
+  </div>
   <p class="gstat" id="gstat"></p>
 
   <div class="quiz" id="quiz">
@@ -799,6 +820,25 @@ function groupStat(g){
 
 /* ── mode & group nav ──────────────────── */
 var modesEl=document.getElementById("modes"),groupsEl=document.getElementById("groups");
+var gselBtn=document.getElementById("gsel");
+function updateGsel(){
+  var g=MODES[cur.m][cur.g];
+  document.getElementById("gselName").textContent=g.title;
+  document.getElementById("gselN").textContent=g.ids.length;
+}
+function closeGroups(){
+  groupsEl.hidden=true;
+  gselBtn.setAttribute("aria-expanded","false");
+}
+gselBtn.onclick=function(){
+  var open=groupsEl.hidden;
+  groupsEl.hidden=!open;
+  gselBtn.setAttribute("aria-expanded",open?"true":"false");
+};
+document.addEventListener("click",function(e){
+  if(e.target.closest&&e.target.closest(".gpick"))return;
+  closeGroups();
+});
 Array.prototype.forEach.call(modesEl.children,function(b){
   b.onclick=function(){cur.m=+b.dataset.m;cur.g=0;cur.i=0;drawGroups();jumpFirstUnanswered();render();};
 });
@@ -814,9 +854,10 @@ function drawGroups(){
     b.innerHTML=label+'<span class="n">'+g.ids.length+'</span>';
     b.title=g.title;
     b.setAttribute("aria-current",i===cur.g?"true":"false");
-    b.onclick=function(){cur.g=i;cur.i=0;jumpFirstUnanswered();render();};
+    b.onclick=function(){cur.g=i;cur.i=0;jumpFirstUnanswered();closeGroups();render();};
     groupsEl.appendChild(b);
   });
+  updateGsel();
 }
 function jumpFirstUnanswered(){
   var g=MODES[cur.m][cur.g],i;
@@ -838,6 +879,7 @@ var qImg=document.getElementById("qImg"),qCount=document.getElementById("qCount"
 function render(){
   var g=MODES[cur.m][cur.g],qid=g.ids[cur.i],q=QBANK[qid];
   Array.prototype.forEach.call(groupsEl.children,function(b,j){b.setAttribute("aria-current",j===cur.g?"true":"false");});
+  updateGsel();
 
   qImg.innerHTML=q.img&&IMGS[q.img]?'<img alt="Экзаменационная картинка" src="'+IMGS[q.img]+'">':'<div class="noimg">вопрос без картинки</div>';
   mediaFor(qid,!!(q.img&&IMGS[q.img]));
@@ -971,6 +1013,7 @@ var schemeEng=null,schemeQid=null,schemeMode="exam",mediaPref="exam";
 try{mediaPref=localStorage.getItem("pdd-media-pref")||"exam";}catch(e){}
 function mediaFor(qid,hasImg){
   var has=!!(SCENES[qid]&&SCENES[qid].scene);
+  document.getElementById("quiz").classList.toggle("nomedia",!has&&!hasImg);
   document.getElementById("mediaTabs").hidden=!has;
   if(!has){
     document.getElementById("qImg").hidden=false;
@@ -1190,7 +1233,7 @@ $("aiToggle").onclick=function(){
 $("aiEdge").onclick=aiOpenDrawer;
 $("aiClose").onclick=function(){document.body.classList.remove("ai-open");};
 document.addEventListener("keydown",function(e){
-  if(e.key==="Escape")document.body.classList.remove("ai-open");
+  if(e.key==="Escape"){document.body.classList.remove("ai-open");closeGroups();}
 });
 $("aiGear").onclick=function(){
   $("aiSetup").hidden=false;$("aiChat").hidden=true;
