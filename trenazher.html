@@ -2,11 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Помеха справа — тренажёр очерёдности проезда</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тренажёр очерёдности — 12 разборов</title>
+<meta name="theme-color" content="#24272A">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; form-action 'none'; base-uri 'none'">
 <style>
 :root{
   --concrete:#E5E4DF;
@@ -174,6 +173,7 @@ footer{padding:60px 0 80px;color:var(--muted);font-size:13px}
 </head>
 <body>
 
+
 <header class="hero">
   <div class="wrap">
     <p class="eyebrow">ПДД · очерёдность проезда</p>
@@ -261,25 +261,53 @@ footer{padding:60px 0 80px;color:var(--muted);font-size:13px}
 </main>
 
 <footer class="wrap">Тренажёр по ПДД РФ. Нумерация пунктов — по действующей редакции; в спорных ситуациях смотри первоисточник.</footer>
-
 <script>
-(function(){
+/* ── PDD scene engine v2 ──────────────────────────────────────────
+   Схематичный вид сверху 400×400. Использование:
+     var eng = SceneEngine(svgElement);
+     eng.build(spec); eng.play(false); eng.play(true) — «а если поехать».
+   Спека:
+   {
+     arms:{N:"road|dirt|yard|tram|none",...}   // отсутствующий ключ = road; none = рукава нет
+     main:"NS"|"EW"|"SE"|...                   // не рисуется, справочно
+     signs:{S:"main|main8_13|yield|stop",...}
+     lights:{S:"r|y|g|yb",...}                 // светофор на рукаве: red/yellow/green/жёлтый мигающий
+     reg:{pose:"side|front|up"}                // регулировщик в центре: грудью/боком/рука вверх — схематично
+     ring:1, merge:1,
+     cars:[{from:"S",to:"N",you:1,order:1,tram:1,onRing:1,path:"M..."}],
+     peds:[{arm:"E",order:2,bike:1}],          // пешеход/велосипед через рукав arm
+     note:"одна строка — что происходит"
+   }
+   order: 1..n — очередь проезда; одинаковый order = одновременно.        */
+function SceneEngine(svg){
 "use strict";
 var SVGNS="http://www.w3.org/2000/svg";
 var C=200,R=55,LN=27,RING=85,ISL=44;
-var COL={asphalt:"#2E3236",dirt:"#4A423A",yard:"#383C40",line:"#F0EEE7",you:"#4FA3E3",other:"#E8B23A",tram:"#C63B31",yellow:"#F0C020",red:"#C63B31"};
+var COL={asphalt:"#2E3236",dirt:"#4A423A",yard:"#383C40",line:"#F0EEE7",
+         you:"#4FA3E3",other:"#E8B23A",tram:"#C63B31",ped:"#8FD48F",bike:"#5FC98F",
+         yellow:"#F0C020",red:"#C63B31",green:"#2F9E63"};
 
-/* geometry: entry / exit points and headings for each arm */
 var IN ={S:{p:[C+LN,400],d:[0,-1]},N:{p:[C-LN,0],d:[0,1]},W:{p:[0,C+LN],d:[1,0]},E:{p:[400,C-LN],d:[-1,0]}};
 var OUT={N:{p:[C+LN,0],d:[0,-1]},S:{p:[C-LN,400],d:[0,1]},E:{p:[400,C+LN],d:[1,0]},W:{p:[0,C-LN],d:[-1,0]}};
 
+function el(n,a){var e=document.createElementNS(SVGNS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
 function crossPath(from,to){
   var i=IN[from],o=OUT[to];
+  if(from===to){ /* разворот */
+    var p1=[i.p[0]+i.d[0]*(400/2-R-10)*0+i.p[0]*0, 0];
+    var ix=i.p[0]+i.d[0]*(C-R-i.pDist||0), r=26;
+    if(i.d[1]!==0){ /* вертикальный въезд */
+      var midY=C+ (i.d[1]<0? 18:-18);
+      return "M"+i.p+" L"+[i.p[0],midY]+" Q"+[i.p[0],midY-26*i.d[1]]+" "+[(i.p[0]+o.p[0])/2,midY-26*i.d[1]]+" Q"+[o.p[0],midY-26*i.d[1]]+" "+[o.p[0],midY]+" L"+o.p;
+    }
+    var midX=C+(i.d[0]<0?18:-18);
+    return "M"+i.p+" L"+[midX,i.p[1]]+" Q"+[midX-26*i.d[0],i.p[1]]+" "+[midX-26*i.d[0],(i.p[1]+o.p[1])/2]+" Q"+[midX-26*i.d[0],o.p[1]]+" "+[midX,o.p[1]]+" L"+o.p;
+  }
   if(i.d[0]===0&&o.d[0]===0) return "M"+i.p+" L"+[i.p[0],o.p[1]];
   if(i.d[1]===0&&o.d[1]===0) return "M"+i.p+" L"+[o.p[0],i.p[1]];
-  var cx=i.d[0]===0?i.p[0]:o.p[0], cy=i.d[0]===0?o.p[1]:i.p[1], r=36;
-  var p1=[cx-i.d[0]*r,cy-i.d[1]*r], p2=[cx+o.d[0]*r,cy+o.d[1]*r];
-  return "M"+i.p+" L"+p1+" Q"+[cx,cy]+" "+p2+" L"+o.p;
+  var cx=i.d[0]===0?i.p[0]:o.p[0], cy=i.d[0]===0?o.p[1]:i.p[1], r2=36;
+  var p1b=[cx-i.d[0]*r2,cy-i.d[1]*r2], p2=[cx+o.d[0]*r2,cy+o.d[1]*r2];
+  return "M"+i.p+" L"+p1b+" Q"+[cx,cy]+" "+p2+" L"+o.p;
 }
 function ang(dx,dy){return Math.atan2(dy,dx)*180/Math.PI;}
 var RIN ={S:ang(LN,Math.sqrt(RING*RING-LN*LN)),E:ang(Math.sqrt(RING*RING-LN*LN),-LN),
@@ -299,8 +327,269 @@ function ringPath(from,to,startOnRing){
   pts.push(OUT[to].p.join(","));
   return "M"+pts[0]+" L"+pts.slice(1).join(" L");
 }
+function dash(x1,y1,x2,y2,o){svg.appendChild(el("line",{x1:x1,y1:y1,x2:x2,y2:y2,stroke:COL.line,"stroke-width":2,"stroke-dasharray":"12 12",opacity:o||.28}));}
 
-/* ── scenarios ─────────────────────────────────────────── */
+function drawArms(sc){
+  var a=sc.arms||{},k,t;
+  var box=el("rect",{x:C-R,y:C-R,width:2*R,height:2*R,fill:COL.asphalt});
+  var rects={N:[C-R,0,2*R,C-R],S:[C-R,C+R,2*R,400-C-R],W:[0,C-R,C-R,2*R],E:[C+R,C-R,400-C-R,2*R]};
+  for(k in rects){
+    t=a[k]===undefined?"road":a[k];
+    if(t==="none")continue;
+    var r=rects[k].slice(),fill=COL.asphalt;
+    if(t==="dirt")fill=COL.dirt;
+    if(t==="yard"){fill=COL.yard;
+      if(k==="N"||k==="S"){r[0]=C-36;r[2]=72;}else{r[1]=C-36;r[3]=72;}}
+    svg.appendChild(el("rect",{x:r[0],y:r[1],width:r[2],height:r[3],fill:fill}));
+  }
+  svg.appendChild(box);
+  for(k in rects){
+    t=a[k]===undefined?"road":a[k];
+    if(t==="none"||t==="dirt"||t==="yard")continue;
+    if(t==="tram"){
+      var seg=(k==="N"||k==="W")?[0,C-R]:[C+R,400];
+      [-LN,LN].forEach(function(off){
+        [-9,9].forEach(function(rr){
+          if(k==="N"||k==="S")
+            svg.appendChild(el("line",{x1:C+off+rr,y1:seg[0],x2:C+off+rr,y2:seg[1],stroke:COL.line,"stroke-width":1.5,opacity:.25}));
+          else
+            svg.appendChild(el("line",{x1:seg[0],y1:C+off+rr,x2:seg[1],y2:C+off+rr,stroke:COL.line,"stroke-width":1.5,opacity:.25}));
+        });
+      });
+      continue;
+    }
+    if(k==="N")dash(C,0,C,C-R); if(k==="S")dash(C,C+R,C,400);
+    if(k==="W")dash(0,C,C-R,C); if(k==="E")dash(C+R,C,400,C);
+  }
+}
+function drawRing(){
+  svg.appendChild(el("rect",{x:C-R,y:0,width:2*R,height:400,fill:COL.asphalt}));
+  svg.appendChild(el("rect",{x:0,y:C-R,width:400,height:2*R,fill:COL.asphalt}));
+  svg.appendChild(el("circle",{cx:C,cy:C,r:RING+R*0.55,fill:COL.asphalt}));
+  svg.appendChild(el("circle",{cx:C,cy:C,r:ISL,fill:"#3E463F",stroke:COL.line,"stroke-width":2,"stroke-opacity":.35}));
+  svg.appendChild(el("circle",{cx:C,cy:C,r:RING,fill:"none",stroke:COL.line,"stroke-width":2,"stroke-dasharray":"10 12",opacity:.22}));
+}
+function drawMerge(){
+  svg.appendChild(el("rect",{x:0,y:110,width:400,height:180,fill:COL.asphalt}));
+  dash(0,170,400,170,.34); dash(0,230,400,230,.34);
+  svg.appendChild(el("line",{x1:0,y1:110,x2:400,y2:110,stroke:COL.line,"stroke-width":2.5,opacity:.5}));
+  svg.appendChild(el("line",{x1:0,y1:290,x2:400,y2:290,stroke:COL.line,"stroke-width":2.5,opacity:.5}));
+}
+var SIGNPOS={S:[C+R+22,C+R+52],N:[C-R-22,C-R-52],E:[C+R+52,C-R-22],W:[C-R-52,C+R+22]};
+function drawSigns(sc){
+  var s=sc.signs||{},k;
+  for(k in s){
+    var p=SIGNPOS[k]; if(!p)continue;
+    var x=p[0],y=p[1],kind=s[k],g=el("g",{});
+    if(kind==="main"||kind==="main8_13"){
+      g.appendChild(el("rect",{x:x-13,y:y-13,width:26,height:26,rx:3,fill:COL.yellow,stroke:"#fff","stroke-width":2.5,transform:"rotate(45 "+x+" "+y+")"}));
+      if(kind==="main8_13"){
+        var pl=el("path",{d:"M"+(x-9)+","+(y+30)+" L"+(x-9)+","+(y+22)+" Q"+(x-9)+","+(y+17)+" "+(x-3)+","+(y+17)+" L"+(x+9)+","+(y+17),fill:"none",stroke:"#1A1C1E","stroke-width":3});
+        g.appendChild(el("rect",{x:x-18,y:y+12,width:36,height:24,rx:2,fill:"#fff",stroke:"#1A1C1E","stroke-width":1.5}));
+        g.appendChild(pl);
+      }
+    }else if(kind==="yield"){
+      g.appendChild(el("path",{d:"M"+(x-15)+","+(y-12)+" L"+(x+15)+","+(y-12)+" L"+x+","+(y+15)+" Z",fill:"#fff",stroke:COL.red,"stroke-width":4,"stroke-linejoin":"round"}));
+    }else if(kind==="stop"){
+      var pts=[],i2;
+      for(i2=0;i2<8;i2++){var a2=(22.5+i2*45)*Math.PI/180;pts.push((x+15*Math.cos(a2)).toFixed(1)+","+(y+15*Math.sin(a2)).toFixed(1));}
+      g.appendChild(el("polygon",{points:pts.join(" "),fill:COL.red,stroke:"#fff","stroke-width":2}));
+      var t=el("text",{x:x,y:y+3.5,"text-anchor":"middle","font-size":"8","font-family":"sans-serif","font-weight":"bold",fill:"#fff"});
+      t.textContent="STOP";g.appendChild(t);
+    }
+    svg.appendChild(g);
+  }
+}
+var LIGHTPOS={S:[C+R+18,C+R+18],N:[C-R-18,C-R-18],E:[C+R+18,C-R-18],W:[C-R-18,C+R+18]};
+function drawLights(sc){
+  var L=sc.lights||{},k;
+  for(k in L){
+    var p=LIGHTPOS[k];if(!p)continue;
+    var x=p[0],y=p[1],st=L[k];
+    svg.appendChild(el("rect",{x:x-7,y:y-16,width:14,height:32,rx:3,fill:"#141618",stroke:"#555","stroke-width":1}));
+    var states={r:[-10,COL.red],y:[0,COL.yellow],g:[10,COL.green]};
+    var key=st==="yb"?"y":st;
+    for(var s2 in states){
+      var cc=el("circle",{cx:x,cy:y+states[s2][0],r:4,
+        fill:s2===key?states[s2][1]:"#2A2E31"});
+      if(s2===key&&st==="yb")
+        cc.appendChild(el("animate",{attributeName:"opacity",values:"1;0.15;1",dur:"1s",repeatCount:"indefinite"}));
+      svg.appendChild(cc);
+    }
+  }
+}
+function drawReg(sc){
+  if(!sc.reg)return;
+  var g=el("g",{});
+  g.appendChild(el("circle",{cx:C,cy:C,r:13,fill:"#202427",stroke:COL.yellow,"stroke-width":2}));
+  g.appendChild(el("circle",{cx:C,cy:C-4,r:3.5,fill:COL.yellow}));
+  var pose=sc.reg.pose||"side";
+  if(pose==="side"){ /* руки в стороны */
+    g.appendChild(el("line",{x1:C-12,y1:C+3,x2:C+12,y2:C+3,stroke:COL.yellow,"stroke-width":2.5,"stroke-linecap":"round"}));
+  }else if(pose==="front"){ /* рука вперёд */
+    g.appendChild(el("line",{x1:C,y1:C+2,x2:C+13,y2:C+2,stroke:COL.yellow,"stroke-width":2.5,"stroke-linecap":"round"}));
+  }else{ /* рука вверх */
+    g.appendChild(el("line",{x1:C,y1:C+2,x2:C,y2:C-14,stroke:COL.yellow,"stroke-width":2.5,"stroke-linecap":"round"}));
+  }
+  svg.appendChild(g);
+}
+var ZEBRA={S:[C,C+R+9,"h"],N:[C,C-R-9,"h"],E:[C+R+9,C,"v"],W:[C-R-9,C,"v"]};
+function drawZebra(arm){
+  var z=ZEBRA[arm];if(!z)return;
+  var i;
+  for(i=-4;i<=4;i++){
+    if(z[2]==="h")
+      svg.appendChild(el("rect",{x:z[0]+i*7-2.5,y:z[1]-8,width:5,height:16,fill:COL.line,opacity:.5}));
+    else
+      svg.appendChild(el("rect",{x:z[0]-8,y:z[1]+i*7-2.5,width:16,height:5,fill:COL.line,opacity:.5}));
+  }
+}
+function pedPath(arm,off){
+  var z=ZEBRA[arm];off=off||0;
+  if(z[2]==="h")return "M"+(z[0]-38)+","+(z[1]+off)+" L"+(z[0]+38)+","+(z[1]+off);
+  return "M"+(z[0]+off)+","+(z[1]-38)+" L"+(z[0]+off)+","+(z[1]+38);
+}
+function makeSprite(c){
+  var g=el("g",{});
+  if(c.kind==="ped"){
+    g.appendChild(el("circle",{cx:0,cy:0,r:5.5,fill:COL.ped,stroke:"#1A1C1E","stroke-width":1}));
+    return g;
+  }
+  if(c.kind==="bike"){
+    g.appendChild(el("rect",{x:-4,y:-9,width:8,height:18,rx:3,fill:COL.bike,stroke:"#1A1C1E","stroke-width":1}));
+    return g;
+  }
+  var col=c.you?COL.you:(c.tram?COL.tram:COL.other);
+  var h=c.tram?66:36,w=c.tram?22:20;
+  g.appendChild(el("rect",{x:-w/2,y:-h/2,width:w,height:h,rx:c.tram?3:5,fill:col}));
+  g.appendChild(el("rect",{x:-w/2+3,y:-h/2+5,width:w-6,height:c.tram?8:9,rx:2,fill:"#1A1C1E",opacity:.42}));
+  if(c.you)g.appendChild(el("circle",{cx:0,cy:-h/2-9,r:3,fill:COL.line,opacity:.75}));
+  return g;
+}
+
+/* ── engine state ── */
+var cars=[],raf=null,mode="hold",spec=null;
+var reduced=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function clear(){
+  cancelAnimationFrame(raf);raf=null;
+  while(svg.firstChild)svg.removeChild(svg.firstChild);
+}
+function build(sc){
+  spec=sc;clear();
+  svg.setAttribute("viewBox","0 0 400 400");
+  svg.appendChild(el("rect",{x:0,y:0,width:400,height:400,fill:"#202326"}));
+  if(sc.ring)drawRing(); else if(sc.merge)drawMerge(); else drawArms(sc);
+  if(!sc.merge&&!sc.ring)
+    svg.appendChild(el("rect",{x:C-R,y:C-R,width:2*R,height:2*R,fill:"none",stroke:COL.line,"stroke-width":1,"stroke-dasharray":"4 6",opacity:.2}));
+  (sc.peds||[]).forEach(function(p){drawZebra(p.arm);});
+  if(!sc.merge){drawSigns(sc);drawLights(sc);drawReg(sc);}
+
+  var hidden=el("g",{opacity:0}); svg.appendChild(hidden);
+  var actors=(sc.cars||[]).slice();
+  var armCnt={};
+  (sc.peds||[]).forEach(function(p){
+    var n=armCnt[p.arm]||0;armCnt[p.arm]=n+1;
+    /* нескольких участников на одной зебре разводим по ширине перехода */
+    actors.push({kind:p.bike?"bike":"ped",order:p.order||1,pedArm:p.arm,pedOff:n*16-((sc.peds.filter(function(x){return x.arm===p.arm;}).length-1)*8)});
+  });
+  cars=actors.map(function(c){
+    var d=c.path?c.path:
+          c.pedArm?pedPath(c.pedArm,c.pedOff):
+          (c.ring?ringPath(c.from,c.to,c.onRing):crossPath(c.from,c.to));
+    var p=el("path",{d:d,fill:"none",stroke:"none"}); hidden.appendChild(p);
+    var L=p.getTotalLength();
+    var hold=L,exit=L,s,pt,inside=false;
+    for(s=0;s<=L;s+=3){
+      pt=p.getPointAtLength(s);
+      var isIn=sc.ring?(Math.hypot(pt.x-C,pt.y-C)<RING+30):
+               sc.merge?(pt.x>110):(pt.x>C-R-4&&pt.x<C+R+4&&pt.y>C-R-4&&pt.y<C+R+4);
+      if(c.pedArm){isIn=true;} /* пешеход всегда «в конфликте» на зебре */
+      if(isIn&&!inside){hold=c.pedArm?Math.max(0,L*0.12):Math.max(0,s-32);inside=true;}
+      if(inside&&!isIn){exit=s;break;}
+      if(c.pedArm)break;
+    }
+    if(c.pedArm){exit=L*0.88;}
+    if(inside&&exit===L)exit=L;
+    var sprite=makeSprite(c); svg.appendChild(sprite);
+    return {path:p,len:L,hold:hold,exit:exit,order:c.order||1,you:!!c.you,kind:c.kind,
+            sprite:sprite,s:0,rel:false,speed:c.kind==="ped"?26:(c.kind==="bike"?44:(c.speed||(c.tram?70:82))),
+            done:false,startOnRing:!!c.onRing};
+  });
+  reset();
+}
+function place(k){
+  var pt=k.path.getPointAtLength(Math.min(k.s,k.len));
+  var pt2=k.path.getPointAtLength(Math.min(k.s+2,k.len));
+  var a=Math.atan2(pt2.y-pt.y,pt2.x-pt.x)*180/Math.PI+90;
+  k.sprite.setAttribute("transform","translate("+pt.x.toFixed(1)+","+pt.y.toFixed(1)+") rotate("+(k.kind==="ped"?0:a.toFixed(1))+")");
+  k.sprite.setAttribute("opacity",k.s>=k.len-1?0:1);
+}
+function reset(){
+  cancelAnimationFrame(raf);raf=null;
+  cars.forEach(function(k){k.s=k.startOnRing?4:0;k.rel=false;k.done=false;
+    var r0=k.sprite.querySelector("rect,circle");
+    place(k);});
+  var f=svg.querySelector(".flash"); if(f)f.remove();
+}
+function play(collide){
+  if(!cars.length)return;
+  reset(); mode=collide?"crash":"hold";
+  var last=performance.now(),stopped=false;
+  function frame(t){
+    var dt=Math.min((t-last)/1000,.05); last=t;
+    var i,j,k;
+    for(i=0;i<cars.length;i++){
+      k=cars[i];
+      if(!k.rel&&k.s>=k.hold-1&&mode==="hold"){
+        var free=true;
+        for(j=0;j<cars.length;j++){
+          var o=cars[j];
+          /* finished cars (или чей путь кончается в зоне) больше не блокируют */
+          if(o.order<k.order&&!o.done&&o.s<o.exit+12)free=false;
+        }
+        if(free)k.rel=true; else {k.s=k.hold;continue;}
+      }
+      k.s+=k.speed*dt;
+      if(k.s>k.len){k.s=k.len;k.done=true;}
+      place(k);
+    }
+    if(mode==="crash"){
+      for(i=0;i<cars.length&&!stopped;i++)for(j=i+1;j<cars.length;j++){
+        var a=cars[i].path.getPointAtLength(Math.min(cars[i].s,cars[i].len));
+        var b=cars[j].path.getPointAtLength(Math.min(cars[j].s,cars[j].len));
+        if(Math.hypot(a.x-b.x,a.y-b.y)<26&&cars[i].s<cars[i].len&&cars[j].s<cars[j].len){
+          stopped=true;
+          var fl=el("circle",{cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,r:4,fill:"none",stroke:COL.red,"stroke-width":4});
+          fl.setAttribute("class","flash");
+          fl.appendChild(el("animate",{attributeName:"r",values:"6;46",dur:"0.7s",repeatCount:"indefinite"}));
+          fl.appendChild(el("animate",{attributeName:"opacity",values:"1;0",dur:"0.7s",repeatCount:"indefinite"}));
+          svg.appendChild(fl);
+          break;
+        }
+      }
+      if(stopped)return;
+    }
+    if(cars.every(function(x){return x.done;})){
+      if(!reduced)setTimeout(function(){if(mode!=="crash")play(false);},900);
+      return;
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+}
+function stop(){cancelAnimationFrame(raf);raf=null;}
+/* для тестов: доступ к рассчитанным траекториям */
+function getCars(){return cars.map(function(k){return {len:k.len,hold:k.hold,exit:k.exit,order:k.order,speed:k.speed,kind:k.kind,you:k.you,
+  at:function(s){return k.path.getPointAtLength(Math.min(s,k.len));}};});}
+return {build:build,play:play,stop:stop,reset:reset,getCars:getCars};
+}
+
+</script>
+<script>
+"use strict";
+/* Без IIFE — как в основном приложении: состояние страницы доступно e2e-тестам. */
+/* 12 разборов очерёдности: сцена в общем формате + вопрос, ответ и объяснение. */
 var YIELD="Уступаю", GO="Еду первым", NONE="ПДД не решает";
 var S=[
 {tier:"База",name:"Классика",
@@ -370,7 +659,7 @@ var S=[
 
 {tier:"Сложнее",name:"Мигающий жёлтый",
  arms:{N:"road",E:"road",S:"road",W:"road"},main:"NS",
- signs:{S:"main",N:"main",E:"yield",W:"yield"},signal:1,
+ signs:{S:"main",N:"main",E:"yield",W:"yield"},lights:{S:"yb",N:"yb",E:"yb",W:"yb"},
  cars:[{from:"S",to:"N",you:1,order:1},{from:"E",to:"W",order:2}],
  setup:"Светофор мигает жёлтым. Под ним висят знаки: у тебя «главная», у него «уступите дорогу». Он справа.",
  opts:[GO,YIELD],ok:0,rung:3,refs:["6.2","13.3"],
@@ -418,187 +707,23 @@ var S=[
 ];
 
 /* ── rendering ─────────────────────────────────────────── */
-var svg=document.getElementById("scene");
-function el(n,a){var e=document.createElementNS(SVGNS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
-function dash(x1,y1,x2,y2,o){var l=el("line",{x1:x1,y1:y1,x2:x2,y2:y2,stroke:COL.line,"stroke-width":2,"stroke-dasharray":"12 12",opacity:o||.28});svg.appendChild(l);}
 
-function drawArms(sc){
-  var a=sc.arms||{},k,t;
-  var box=el("rect",{x:C-R,y:C-R,width:2*R,height:2*R,fill:COL.asphalt});
-  var rects={N:[C-R,0,2*R,C-R],S:[C-R,C+R,2*R,400-C-R],W:[0,C-R,C-R,2*R],E:[C+R,C-R,400-C-R,2*R]};
-  for(k in rects){
-    t=a[k]; if(!t)continue;
-    var r=rects[k].slice(),fill=COL.asphalt;
-    if(t==="dirt")fill=COL.dirt;
-    if(t==="yard"){fill=COL.yard;
-      if(k==="N"||k==="S"){r[0]=C-36;r[2]=72;}else{r[1]=C-36;r[3]=72;}}
-    svg.appendChild(el("rect",{x:r[0],y:r[1],width:r[2],height:r[3],fill:fill}));
-  }
-  svg.appendChild(box);
-  for(k in rects){
-    t=a[k]; if(!t||t==="dirt"||t==="yard")continue;
-    if(t==="tram"){
-      var seg=(k==="N"||k==="W")?[0,C-R]:[C+R,400];
-      [-LN,LN].forEach(function(off){
-        [-9,9].forEach(function(rr){
-          if(k==="N"||k==="S")
-            svg.appendChild(el("line",{x1:C+off+rr,y1:seg[0],x2:C+off+rr,y2:seg[1],stroke:COL.line,"stroke-width":1.5,opacity:.25}));
-          else
-            svg.appendChild(el("line",{x1:seg[0],y1:C+off+rr,x2:seg[1],y2:C+off+rr,stroke:COL.line,"stroke-width":1.5,opacity:.25}));
-        });
-      });
-      continue;
-    }
-    if(k==="N")dash(C,0,C,C-R); if(k==="S")dash(C,C+R,C,400);
-    if(k==="W")dash(0,C,C-R,C); if(k==="E")dash(C+R,C,400,C);
-  }
-}
-function drawRing(){
-  svg.appendChild(el("rect",{x:C-R,y:0,width:2*R,height:400,fill:COL.asphalt}));
-  svg.appendChild(el("rect",{x:0,y:C-R,width:400,height:2*R,fill:COL.asphalt}));
-  svg.appendChild(el("circle",{cx:C,cy:C,r:RING+R*0.55,fill:COL.asphalt}));
-  svg.appendChild(el("circle",{cx:C,cy:C,r:ISL,fill:"#3E463F",stroke:COL.line,"stroke-width":2,"stroke-opacity":.35}));
-  svg.appendChild(el("circle",{cx:C,cy:C,r:RING,fill:"none",stroke:COL.line,"stroke-width":2,"stroke-dasharray":"10 12",opacity:.22}));
-}
-function drawMerge(){
-  svg.appendChild(el("rect",{x:0,y:110,width:400,height:180,fill:COL.asphalt}));
-  dash(0,170,400,170,.34); dash(0,230,400,230,.34);
-  svg.appendChild(el("line",{x1:0,y1:110,x2:400,y2:110,stroke:COL.line,"stroke-width":2.5,opacity:.5}));
-  svg.appendChild(el("line",{x1:0,y1:290,x2:400,y2:290,stroke:COL.line,"stroke-width":2.5,opacity:.5}));
-}
-var SIGNPOS={S:[C+R+22,C+R+52],N:[C-R-22,C-R-52],E:[C+R+52,C-R-22],W:[C-R-52,C+R+22]};
-function drawSigns(sc){
-  var s=sc.signs||{},k;
-  for(k in s){
-    var p=SIGNPOS[k]; if(!p)continue;
-    var x=p[0],y=p[1],kind=s[k],g=el("g",{});
-    if(kind==="main"||kind==="main8_13"){
-      g.appendChild(el("rect",{x:x-13,y:y-13,width:26,height:26,rx:3,fill:COL.yellow,stroke:"#fff","stroke-width":2.5,transform:"rotate(45 "+x+" "+y+")"}));
-      if(kind==="main8_13"){
-        var pl=el("path",{d:"M"+(x-9)+","+(y+30)+" L"+(x-9)+","+(y+22)+" Q"+(x-9)+","+(y+17)+" "+(x-3)+","+(y+17)+" L"+(x+9)+","+(y+17),fill:"none",stroke:"#1A1C1E","stroke-width":3});
-        g.appendChild(el("rect",{x:x-18,y:y+12,width:36,height:24,rx:2,fill:"#fff",stroke:"#1A1C1E","stroke-width":1.5}));
-        g.appendChild(pl);
-      }
-    }else if(kind==="yield"){
-      g.appendChild(el("path",{d:"M"+(x-15)+","+(y-12)+" L"+(x+15)+","+(y-12)+" L"+x+","+(y+15)+" Z",fill:"#fff",stroke:COL.red,"stroke-width":4,"stroke-linejoin":"round"}));
-    }
-    svg.appendChild(g);
-  }
-  if(sc.signal){
-    var g2=el("g",{});
-    g2.appendChild(el("rect",{x:C-R-40,y:C-R-40,width:20,height:20,rx:3,fill:"#1A1C1E",stroke:"#555","stroke-width":1}));
-    var c=el("circle",{cx:C-R-30,cy:C-R-30,r:6,fill:COL.yellow});
-    c.appendChild(el("animate",{attributeName:"opacity",values:"1;0.15;1",dur:"1s",repeatCount:"indefinite"}));
-    g2.appendChild(c); svg.appendChild(g2);
-  }
-}
-function drawXpoint(sc){
-  if(sc.merge||sc.ring)return;
-  svg.appendChild(el("rect",{x:C-R,y:C-R,width:2*R,height:2*R,fill:"none",stroke:COL.line,"stroke-width":1,"stroke-dasharray":"4 6",opacity:.2}));
-}
 
-/* car sprite */
-function makeCar(c){
-  var g=el("g",{}),col=c.you?COL.you:(c.tram?COL.tram:COL.other);
-  var h=c.tram?66:36,w=c.tram?22:20;
-  g.appendChild(el("rect",{x:-w/2,y:-h/2,width:w,height:h,rx:c.tram?3:5,fill:col}));
-  g.appendChild(el("rect",{x:-w/2+3,y:-h/2+5,width:w-6,height:c.tram?8:9,rx:2,fill:"#1A1C1E",opacity:.42}));
-  if(c.you){
-    g.appendChild(el("circle",{cx:0,cy:-h/2-9,r:3,fill:COL.line,opacity:.75}));
-  }
-  return g;
-}
+/* Тренажёр очерёдности: 12 разборов на общем движке сцен (src/scene_engine.js).
+   Раньше страница несла свою копию движка — фикс дедлока пришлось делать дважды. */
 
-/* ── animation engine ──────────────────────────────────── */
-var cars=[],raf=null,mode="hold",cur=0,answered=[],reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+var svg = document.getElementById("scene");
+var engine = SceneEngine(svg);
+var cur = 0;
+var answered = S.map(function () { return false; });
+var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-function build(i){
-  var sc=S[i];
-  while(svg.firstChild&&svg.firstChild.nodeName!=="title")svg.removeChild(svg.firstChild);
-  while(svg.childNodes.length>1)svg.removeChild(svg.lastChild);
-  svg.appendChild(el("rect",{x:0,y:0,width:400,height:400,fill:"#202326"}));
-
-  if(sc.ring)drawRing(); else if(sc.merge)drawMerge(); else drawArms(sc);
-  drawXpoint(sc); if(!sc.merge)drawSigns(sc);
-
-  var hidden=el("g",{opacity:0}); svg.appendChild(hidden);
-  cars=sc.cars.map(function(c){
-    var d=c.path?c.path:(c.ring?ringPath(c.from,c.to,c.onRing):crossPath(c.from,c.to));
-    var p=el("path",{d:d,fill:"none",stroke:"none"}); hidden.appendChild(p);
-    var L=p.getTotalLength();
-    var hold=L,exit=L,s,pt,inside=false;
-    for(s=0;s<=L;s+=3){
-      pt=p.getPointAtLength(s);
-      var isIn=sc.ring?(Math.hypot(pt.x-C,pt.y-C)<RING+30):
-               sc.merge?(pt.x>110):(pt.x>C-R-4&&pt.x<C+R+4&&pt.y>C-R-4&&pt.y<C+R+4);
-      if(isIn&&!inside){hold=Math.max(0,s-26);inside=true;}
-      if(inside&&!isIn){exit=s;break;}
-    }
-    if(inside&&exit===L)exit=L;
-    var sprite=makeCar(c); svg.appendChild(sprite);
-    return {path:p,len:L,hold:hold,exit:exit,order:c.order,you:!!c.you,
-            sprite:sprite,s:0,rel:false,speed:c.tram?70:82,done:false,startOnRing:!!c.onRing};
-  });
-  reset();
-}
-function place(k){
-  var pt=k.path.getPointAtLength(Math.min(k.s,k.len));
-  var pt2=k.path.getPointAtLength(Math.min(k.s+2,k.len));
-  var a=Math.atan2(pt2.y-pt.y,pt2.x-pt.x)*180/Math.PI+90;
-  k.sprite.setAttribute("transform","translate("+pt.x.toFixed(1)+","+pt.y.toFixed(1)+") rotate("+a.toFixed(1)+")");
-  k.sprite.setAttribute("opacity",k.s>=k.len-1?0:1);
-}
-function reset(){
-  cancelAnimationFrame(raf);raf=null;
-  cars.forEach(function(k){k.s=k.startOnRing?4:0;k.rel=false;k.done=false;
-    k.sprite.querySelector("rect").setAttribute("fill",k.you?COL.you:COL.other);place(k);});
-  var f=svg.querySelector(".flash"); if(f)f.remove();
-}
-function run(collide){
-  reset(); mode=collide?"crash":"hold";
-  var last=performance.now(),stopped=false;
-  function frame(t){
-    var dt=Math.min((t-last)/1000,.05); last=t;
-    var i,j,k;
-    for(i=0;i<cars.length;i++){
-      k=cars[i];
-      if(!k.rel&&k.s>=k.hold-1&&mode==="hold"){
-        var free=true;
-        for(j=0;j<cars.length;j++){
-          var o=cars[j];
-          if(o.order<k.order&&!o.done&&o.s<o.exit+12)free=false;
-        }
-        if(free)k.rel=true; else {k.s=k.hold;continue;}
-      }
-      k.s+=k.speed*dt;
-      if(k.s>k.len){k.s=k.len;k.done=true;}
-      place(k);
-    }
-    if(mode==="crash"){
-      for(i=0;i<cars.length&&!stopped;i++)for(j=i+1;j<cars.length;j++){
-        var a=cars[i].path.getPointAtLength(Math.min(cars[i].s,cars[i].len));
-        var b=cars[j].path.getPointAtLength(Math.min(cars[j].s,cars[j].len));
-        if(Math.hypot(a.x-b.x,a.y-b.y)<26&&cars[i].s<cars[i].len&&cars[j].s<cars[j].len){
-          stopped=true;
-          var fl=el("circle",{cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,r:4,fill:"none",stroke:COL.red,"stroke-width":4});
-          fl.setAttribute("class","flash");
-          fl.appendChild(el("animate",{attributeName:"r",values:"6;46",dur:"0.7s",repeatCount:"indefinite"}));
-          fl.appendChild(el("animate",{attributeName:"opacity",values:"1;0",dur:"0.7s",repeatCount:"indefinite"}));
-          svg.appendChild(fl);
-          cars[i].sprite.querySelector("rect").setAttribute("fill",COL.red);
-          cars[j].sprite.querySelector("rect").setAttribute("fill",COL.red);
-          break;
-        }
-      }
-      if(stopped)return;
-    }
-    if(cars.every(function(x){return x.done;})){
-      if(!reduced)setTimeout(function(){if(mode!=="crash")run(false);},900);
-      return;
-    }
-    raf=requestAnimationFrame(frame);
-  }
-  raf=requestAnimationFrame(frame);
+/* Разбор несёт и сцену, и вопрос с объяснением — движку нужна только сцена. */
+function sceneOf(sc) {
+  return {
+    arms: sc.arms, signs: sc.signs, lights: sc.lights, reg: sc.reg,
+    cars: sc.cars, peds: sc.peds, ring: sc.ring, merge: sc.merge
+  };
 }
 
 /* ── UI ────────────────────────────────────────────────── */
@@ -636,8 +761,8 @@ function show(i){
   document.getElementById("reveal").hidden=true;
   document.getElementById("crash").disabled=true;
   drawRail(sc.rung);
-  build(i);
-  if(!reduced)run(false);
+  engine.build(sceneOf(sc));
+  if(!reduced)engine.play(false);
 }
 function pick(k){
   var sc=S[cur],right=(k===sc.ok);
@@ -658,10 +783,10 @@ function pick(k){
   document.getElementById("reveal").hidden=false;
   document.getElementById("crash").disabled=false;
   document.getElementById("prog").textContent="решено "+answered.filter(Boolean).length+" / "+S.length;
-  run(false);
+  engine.play(false);
 }
-document.getElementById("play").onclick=function(){run(false);};
-document.getElementById("crash").onclick=function(){run(true);};
+document.getElementById("play").onclick=function(){engine.play(false);};
+document.getElementById("crash").onclick=function(){engine.play(true);};
 document.getElementById("prev").onclick=function(){show((cur-1+S.length)%S.length);};
 document.getElementById("next").onclick=function(){show((cur+1)%S.length);};
 document.addEventListener("keydown",function(e){
@@ -690,7 +815,7 @@ if(start>=0){
   var st=document.querySelector(".stage");
   if(st)setTimeout(function(){st.scrollIntoView({behavior:"auto",block:"start"});},50);
 }
-})();
+
 </script>
 </body>
 </html>
