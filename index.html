@@ -1215,11 +1215,8 @@ Array.prototype.forEach.call(document.querySelectorAll(".qlink a[data-topic]"),f
 
 /* ── AI chat ───────────────────────────── */
 var AI_PRESETS={
-  anthropic:{base:"https://api.anthropic.com",format:"anthropic",model:"claude-haiku-4-5",
-    models:[{id:"claude-haiku-4-5",label:"Claude Haiku 4.5 — быстрая, ~$0,002 за разбор"},
-            {id:"claude-sonnet-5",label:"Claude Sonnet 5 — умнее, втрое дороже"},
-            {id:"claude-opus-5",label:"Claude Opus 5 — самая умная, дорогая"}],
-    hint:'Ключ Anthropic: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Платный, но Haiku хватает: ~500 разборов на доллар. Ключ хранится только в этом браузере.'},
+  anthropic:{base:"https://api.anthropic.com",format:"anthropic",model:"claude-haiku-4-5",fixed:1,
+    hint:'Модель — Claude Haiku 4.5. Ключ: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, ~500 разборов на доллар. Ключ хранится только в этом браузере.'},
   zai:{base:"https://api.z.ai/api/anthropic",format:"anthropic",model:"glm-4.5-flash",
     models:[{id:"glm-4.5-flash",label:"GLM-4.5 Flash — бесплатная, стабильная"},
             {id:"glm-4.7-flash",label:"GLM-4.7 Flash — бесплатная, бывает занята"},
@@ -1288,6 +1285,10 @@ function aiFillSetup(){
 function aiSetModelUI(model){
   var p=AI_PRESETS[$("aiProv").value],sel=$("aiModelSel"),inp=$("aiModel");
   sel.innerHTML="";
+  if(p.fixed){                       /* модель провайдера не выбирается */
+    sel.hidden=true;inp.hidden=true;inp.value=p.model;
+    return;
+  }
   (p.models||[]).forEach(function(m){
     var o=document.createElement("option");
     o.value=m.id;o.textContent=m.label;
@@ -1364,7 +1365,7 @@ $("aiSave").onclick=function(){
   var pr=$("aiProv").value,p=AI_PRESETS[pr];
   var k=$("aiKey").value.trim();
   var sel=$("aiModelSel");
-  var m=(sel.hidden||sel.value==="__custom")?$("aiModel").value.trim():sel.value;
+  var m=p.fixed?p.model:((sel.hidden||sel.value==="__custom")?$("aiModel").value.trim():sel.value);
   m=m||p.model;
   var b=(pr==="custom"?$("aiBase").value.trim():p.base).replace(/\/+$/,"");
   if(!k||!m||!b)return;
