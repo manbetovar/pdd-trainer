@@ -1153,8 +1153,8 @@ Array.prototype.forEach.call(document.querySelectorAll(".qlink a[data-topic]"),f
 var AI_PRESETS={
   anthropic:{base:"https://api.anthropic.com",format:"anthropic",model:"claude-sonnet-5",
     hint:'Ключ Anthropic: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Платный, но дешёвый в этом объёме.'},
-  zai:{base:"https://api.z.ai/api/anthropic",format:"anthropic",model:"glm-4.7-flash",
-    hint:'Бесплатные модели: <b>glm-4.7-flash</b> и glm-4.5-flash (glm-4.7 без суффикса — платная, нужен пакет). Регистрация: <a href="https://z.ai" target="_blank" rel="noopener">z.ai</a> или <a href="https://open.bigmodel.cn" target="_blank" rel="noopener">bigmodel.cn</a>. Ругается «overloaded» — смени через ⚙ на glm-4.5-flash.'},
+  zai:{base:"https://api.z.ai/api/anthropic",format:"anthropic",model:"glm-4.5-flash",
+    hint:'Бесплатные модели: <b>glm-4.5-flash</b> (стабильная) и glm-4.7-flash (умнее, но бесплатный пул часто перегружен). glm-4.7 без суффикса — платная, нужен пакет. Регистрация: <a href="https://z.ai" target="_blank" rel="noopener">z.ai</a> или <a href="https://open.bigmodel.cn" target="_blank" rel="noopener">bigmodel.cn</a>.'},
   deepseek:{base:"https://api.deepseek.com/anthropic",format:"anthropic",model:"deepseek-chat",
     hint:'Ключ: <a href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a>. Очень дёшево. Если браузер не пустит (CORS) — попробуй OpenRouter.'},
   openrouter:{base:"https://openrouter.ai/api/v1",format:"openai",model:"",
@@ -1162,7 +1162,7 @@ var AI_PRESETS={
   custom:{base:"",format:"openai",model:"",
     hint:'Любой OpenAI-совместимый API: укажи base URL (до /chat/completions), ключ и модель.'}
 };
-var aiCfg={provider:"zai",key:"",model:"glm-4.7-flash",
+var aiCfg={provider:"zai",key:"",model:"glm-4.5-flash",
   base:"https://api.z.ai/api/anthropic",format:"anthropic"};
 try{
   var c=JSON.parse(localStorage.getItem("pdd-ai-cfg")||"{}");
@@ -1171,9 +1171,9 @@ try{
   if(c.provider&&AI_PRESETS[c.provider])aiCfg.provider=c.provider;
   if(c.base)aiCfg.base=c.base;
   if(c.format)aiCfg.format=c.format;
-  /* glm-4.7 был дефолтом до 08.2026, но у Z.ai это платная модель — мигрируем на бесплатную */
-  if(aiCfg.provider==="zai"&&aiCfg.model==="glm-4.7"){
-    aiCfg.model="glm-4.7-flash";
+  /* прежние дефолты: glm-4.7 у Z.ai платная, glm-4.7-flash бесплатная но перегружена — мигрируем на стабильную */
+  if(aiCfg.provider==="zai"&&(aiCfg.model==="glm-4.7"||aiCfg.model==="glm-4.7-flash")){
+    aiCfg.model="glm-4.5-flash";
     try{localStorage.setItem("pdd-ai-cfg",JSON.stringify(aiCfg));}catch(e2){}
   }
 }catch(e){}
@@ -1327,7 +1327,7 @@ function aiSend(){
       if(typeof msg!=="string")msg=JSON.stringify(msg);
       if(res.status===401)msg="Ключ не подошёл (401). Проверь его через ⚙.";
       if(res.status===404)msg="Модель не найдена (404): проверь id модели через ⚙.";
-      if(res.status===429)msg="Лимит запросов (429) — у бесплатных тарифов жёсткие лимиты, подожди минуту.";
+      if(res.status===429||res.status===529)msg="Бесплатный пул модели перегружен ("+res.status+"). Подожди полминуты и повтори; если часто — поставь glm-4.5-flash через ⚙.";
       aiHist[qid].push({role:"assistant",content:"Ошибка: "+msg,error:true});
     }
   }).catch(function(e){
