@@ -1,5 +1,5 @@
 /* ПДД-тренажёр: офлайн-кэш. Всё зашито в два html — кэшируем целиком. */
-var CACHE = "pdd-v6";
+var CACHE = "pdd-v7";
 var ASSETS = [
   "./",
   "./index.html",
