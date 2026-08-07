@@ -394,7 +394,8 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
       </div>
       <div class="ai-row"><input class="ai-inp" id="aiKey" type="password" placeholder="API-ключ"></div>
       <div class="ai-row">
-        <input class="ai-inp" id="aiModel" placeholder="модель">
+        <select class="ai-inp" id="aiModelSel"></select>
+        <input class="ai-inp" id="aiModel" placeholder="id модели" hidden>
         <input class="ai-inp" id="aiBase" placeholder="base URL" hidden>
         <button class="ai-btn" id="aiSave">Сохранить</button>
       </div>
@@ -1132,7 +1133,7 @@ function aiOpenRef(key){
   var ctx=document.getElementById("aiCtx");
   if(ctx&&AIREFS[key])ctx.textContent=AIREFS[key].label;
   document.body.classList.add("ai-open");
-  $("aiProv").value=aiCfg.provider;$("aiModel").value=aiCfg.model;$("aiBase").value=aiCfg.base;
+  $("aiProv").value=aiCfg.provider;aiSetModelUI(aiCfg.model);$("aiBase").value=aiCfg.base;
   if(aiCfg.key)$("aiKey").value=aiCfg.key;
   aiFillSetup();aiShowRightPane();aiDrawMsgs();
   setTimeout(function(){if(aiCfg.key)$("aiInput").focus();},260);
@@ -1152,13 +1153,24 @@ Array.prototype.forEach.call(document.querySelectorAll(".qlink a[data-topic]"),f
 /* ── AI chat ───────────────────────────── */
 var AI_PRESETS={
   anthropic:{base:"https://api.anthropic.com",format:"anthropic",model:"claude-sonnet-5",
+    models:[{id:"claude-sonnet-5",label:"Claude Sonnet 5 — баланс цены и ума"},
+            {id:"claude-haiku-4-5-20251001",label:"Claude Haiku 4.5 — быстрая и дешёвая"},
+            {id:"claude-opus-5",label:"Claude Opus 5 — самая умная"}],
     hint:'Ключ Anthropic: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Платный, но дешёвый в этом объёме.'},
   zai:{base:"https://api.z.ai/api/anthropic",format:"anthropic",model:"glm-4.5-flash",
-    hint:'Бесплатные модели: <b>glm-4.5-flash</b> (стабильная) и glm-4.7-flash (умнее, но бесплатный пул часто перегружен). glm-4.7 без суффикса — платная, нужен пакет. Регистрация: <a href="https://z.ai" target="_blank" rel="noopener">z.ai</a> или <a href="https://open.bigmodel.cn" target="_blank" rel="noopener">bigmodel.cn</a>.'},
+    models:[{id:"glm-4.5-flash",label:"GLM-4.5 Flash — бесплатная, стабильная"},
+            {id:"glm-4.7-flash",label:"GLM-4.7 Flash — бесплатная, бывает занята"},
+            {id:"glm-4.7",label:"GLM-4.7 — платная, нужен пакет"}],
+    hint:'Регистрация: <a href="https://z.ai" target="_blank" rel="noopener">z.ai</a> или <a href="https://open.bigmodel.cn" target="_blank" rel="noopener">bigmodel.cn</a> — бесплатные flash-модели уже в списке выше.'},
   deepseek:{base:"https://api.deepseek.com/anthropic",format:"anthropic",model:"deepseek-chat",
+    models:[{id:"deepseek-chat",label:"DeepSeek Chat — обычная"},
+            {id:"deepseek-reasoner",label:"DeepSeek Reasoner — рассуждающая"}],
     hint:'Ключ: <a href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a>. Очень дёшево. Если браузер не пустит (CORS) — попробуй OpenRouter.'},
-  openrouter:{base:"https://openrouter.ai/api/v1",format:"openai",model:"",
-    hint:'Ключ: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Модель возьми на <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">openrouter.ai/models</a> (фильтр Free) — например deepseek/qwen/glm с суффиксом :free. Работает из браузера.'},
+  openrouter:{base:"https://openrouter.ai/api/v1",format:"openai",model:"openrouter/free",
+    models:[{id:"openrouter/free",label:"Авто — любая свободная бесплатная"},
+            {id:"nvidia/nemotron-3-ultra-550b-a55b:free",label:"Nemotron 3 Ultra — бесплатная"},
+            {id:"google/gemma-4-31b-it:free",label:"Gemma 4 31B — бесплатная"}],
+    hint:'Ключ: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>. Полный список бесплатных: <a href="https://openrouter.ai/models?max_price=0" target="_blank" rel="noopener">openrouter.ai/models</a>. Работает из браузера.'},
   custom:{base:"",format:"openai",model:"",
     hint:'Любой OpenAI-совместимый API: укажи base URL (до /chat/completions), ключ и модель.'}
 };
@@ -1210,16 +1222,44 @@ function aiFillSetup(){
   $("aiBase").hidden=$("aiProv").value!=="custom";
   $("aiZaiCta").hidden=$("aiProv").value!=="zai";
 }
+function aiSetModelUI(model){
+  var p=AI_PRESETS[$("aiProv").value],sel=$("aiModelSel"),inp=$("aiModel");
+  sel.innerHTML="";
+  (p.models||[]).forEach(function(m){
+    var o=document.createElement("option");
+    o.value=m.id;o.textContent=m.label;
+    sel.appendChild(o);
+  });
+  if(p.models&&p.models.length){
+    var oc=document.createElement("option");
+    oc.value="__custom";oc.textContent="Другая модель — вписать id…";
+    sel.appendChild(oc);
+    var inList=p.models.some(function(m){return m.id===model;});
+    sel.hidden=false;
+    sel.value=inList?model:"__custom";
+    inp.hidden=inList;
+    if(!inList)inp.value=model||"";
+  }else{
+    sel.hidden=true;
+    inp.hidden=false;
+    inp.value=model||"";
+  }
+}
+$("aiModelSel").onchange=function(){
+  var c=$("aiModelSel").value==="__custom";
+  $("aiModel").hidden=!c;
+  if(c){$("aiModel").value="";$("aiModel").focus();}
+};
 $("aiProv").onchange=function(){
   var pr=$("aiProv").value,p=AI_PRESETS[pr];
-  $("aiModel").value=p.model;
+  aiSetModelUI(p.model);
   $("aiBase").value=p.base;
   aiFillSetup();
 };
 function aiOpenDrawer(){
   document.body.classList.add("ai-open");
   $("aiProv").value=aiCfg.provider;
-  $("aiModel").value=aiCfg.model;
+  aiSetModelUI(aiCfg.model);
   $("aiBase").value=aiCfg.base;
   if(aiCfg.key)$("aiKey").value=aiCfg.key;
   aiFillSetup();
@@ -1243,13 +1283,15 @@ document.addEventListener("keydown",function(e){
 $("aiGear").onclick=function(){
   $("aiSetup").hidden=false;$("aiChat").hidden=true;
   $("aiProv").value=aiCfg.provider;
-  $("aiKey").value=aiCfg.key;$("aiModel").value=aiCfg.model;$("aiBase").value=aiCfg.base;
+  $("aiKey").value=aiCfg.key;aiSetModelUI(aiCfg.model);$("aiBase").value=aiCfg.base;
   aiFillSetup();
 };
 $("aiSave").onclick=function(){
   var pr=$("aiProv").value,p=AI_PRESETS[pr];
   var k=$("aiKey").value.trim();
-  var m=$("aiModel").value.trim()||p.model;
+  var sel=$("aiModelSel");
+  var m=(sel.hidden||sel.value==="__custom")?$("aiModel").value.trim():sel.value;
+  m=m||p.model;
   var b=(pr==="custom"?$("aiBase").value.trim():p.base).replace(/\/+$/,"");
   if(!k||!m||!b)return;
   aiCfg={provider:pr,key:k,model:m,base:b,format:p.format};
