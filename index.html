@@ -49,9 +49,12 @@ body{margin:0;background:var(--concrete);color:var(--ink);font-family:"Golos Tex
 .side-stat .bar i{display:block;height:100%;width:0;background:var(--yellow);transition:width .3s ease}
 
 /* ── AI edge tab ──────────────────────── */
-.ai-edge{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:55;writing-mode:vertical-rl;display:flex;align-items:center;gap:9px;padding:16px 9px;border:none;cursor:pointer;background:var(--yellow);color:var(--ink);border-radius:8px 0 0 8px;font-family:"Oswald","Golos Text",sans-serif;font-size:12px;letter-spacing:.12em;text-transform:uppercase;box-shadow:-4px 0 16px rgba(0,0,0,.2);transition:transform .25s ease,opacity .2s ease}
+.ai-edge{position:fixed;right:0;top:0;bottom:0;z-index:55;writing-mode:vertical-rl;display:flex;align-items:center;justify-content:center;gap:10px;padding:0 8px;border:none;cursor:pointer;background:var(--yellow);color:var(--ink);border-radius:0;font-family:"Oswald","Golos Text",sans-serif;font-size:12px;letter-spacing:.12em;text-transform:uppercase;box-shadow:-4px 0 16px rgba(0,0,0,.2);transition:transform .25s ease,opacity .2s ease}
+.ai-edge svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linejoin:round;flex:none}
 .ai-edge:hover{filter:brightness(1.05)}
-body.ai-open .ai-edge{transform:translate(110%,-50%);opacity:0;pointer-events:none}
+body.ai-open .ai-edge{transform:translateX(110%);opacity:0;pointer-events:none}
+.ai-handle{display:none}
+@media(min-width:1000px){.content{padding-right:44px}}
 
 /* ── mobile: bottom tab bar + FAB ─────── */
 @media(max-width:999px){
@@ -61,9 +64,12 @@ body.ai-open .ai-edge{transform:translate(110%,-50%);opacity:0;pointer-events:no
   .side-tab{flex-direction:column;gap:4px;font-size:9.5px;letter-spacing:.05em;padding:6px 8px;border-left:none;flex:1;align-items:center;text-align:center}
   .side-tab[aria-current="true"]{background:none;color:var(--yellow)}
   .content{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
-  .ai-edge{writing-mode:horizontal-tb;top:auto;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));transform:none;width:54px;height:54px;border-radius:50%;padding:0;justify-content:center;font-size:20px;letter-spacing:0;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .ai-edge{writing-mode:horizontal-tb;top:auto;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));transform:none;width:54px;height:54px;border-radius:50%;padding:0;justify-content:center;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .ai-edge svg{width:24px;height:24px}
   .ai-edge .ai-edge-label{display:none}
   body.ai-open .ai-edge{transform:translateY(140%);opacity:0}
+  .ai-handle{display:block;width:100%;background:none;border:none;padding:8px 0 12px;cursor:pointer;flex:none}
+  .ai-handle i{display:block;width:44px;height:5px;border-radius:3px;background:rgba(240,238,231,.35);margin:0 auto}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .eyebrow{font-weight:600;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;font-family:"Oswald","Golos Text",sans-serif}
@@ -187,15 +193,15 @@ body.ai-open #aiDrawer{transform:none}
 .ai-btn:hover{filter:brightness(1.06)}
 .ai-btn[disabled]{opacity:.4;cursor:default}
 .ai-quick{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
-.ai-quick .q-btn{font-size:10px;padding:6px 10px}
-.ai-msgs{display:flex;flex-direction:column;gap:8px;margin:0 0 10px;flex:1;min-height:0;overflow:auto}
-.ai-m{font-size:13.5px;line-height:1.55;padding:9px 12px;border-radius:var(--r-sm);white-space:pre-wrap;word-wrap:break-word}
-.ai-m.u{background:rgba(79,163,227,.14);border-left:3px solid var(--blue);color:var(--line)}
-.ai-m.b{background:rgba(240,238,231,.05);border-left:3px solid var(--yellow);color:#D6DADD}
-.ai-m.e{background:rgba(198,59,49,.14);border-left:3px solid var(--red);color:#E5A29C}
+.ai-quick .q-btn{font-family:inherit;text-transform:none;letter-spacing:0;font-size:12px;padding:6px 12px;border-radius:14px}
+.ai-msgs{display:flex;flex-direction:column;gap:6px;margin:0 0 10px;flex:1;min-height:0;overflow:auto}
+.ai-m{font-size:13px;line-height:1.45;padding:8px 11px;border-radius:12px;white-space:pre-wrap;word-wrap:break-word;max-width:88%}
+.ai-m.u{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px}
+.ai-m.b{align-self:flex-start;background:rgba(240,238,231,.09);color:#E0E3E5;border-bottom-left-radius:4px}
+.ai-m.e{align-self:flex-start;background:rgba(198,59,49,.16);color:#E5A29C;border:1px solid rgba(198,59,49,.4)}
 .ai-hint{font-size:11px;color:var(--steel-3);margin:6px 0 0}
-.ai-gear{background:none;border:none;color:var(--steel-3);font-size:12px;cursor:pointer;padding:4px;margin-left:8px}
-.ai-gear:hover{color:var(--line)}
+.ai-gear{background:none;border:1px solid var(--hair-d);border-radius:var(--r-sm);color:var(--steel-2);font-family:"Oswald","Golos Text",sans-serif;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;padding:7px 10px;margin-left:8px;flex:none;white-space:nowrap}
+.ai-gear:hover{color:var(--ink);background:var(--yellow);border-color:var(--yellow)}
 .q-nav{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
 .q-btn{font-family:"Oswald","Golos Text",sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:var(--steel-2);border:1px solid rgba(240,238,231,.22);padding:8px 14px;border-radius:var(--r-sm);cursor:pointer}
 .q-btn:hover{border-color:var(--line);color:var(--line)}
@@ -318,7 +324,7 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
       <p class="q-verdict" id="qVerdict" hidden></p>
       <p class="q-tip" id="qTip" hidden></p>
       <div class="ai" id="aiBox">
-        <button class="ai-toggle" id="aiToggle">✦ Обсудить с ИИ</button>
+        <button class="ai-toggle" id="aiToggle">Обсудить с ИИ</button>
       </div>
       <div class="q-nav">
         <button class="q-btn" id="prev">← Пред</button>
@@ -340,7 +346,7 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 <section class="view" id="view-refbook" hidden>
 
   <h2 style="margin-bottom:6px">Справочник</h2>
-  <p style="max-width:60ch;color:var(--ink-2);margin-bottom:20px">Все дорожные знаки, разметка и штрафы. У каждого элемента — кнопка ✦: открывает чат с ИИ уже в контексте этого знака или статьи.</p>
+  <p style="max-width:60ch;color:var(--ink-2);margin-bottom:20px">Все дорожные знаки, разметка и штрафы. У каждого элемента — кнопка «Спросить ИИ»: чат откроется уже в контексте этого знака или статьи.</p>
 
   <nav class="modes" id="refTabs" aria-label="Справочник">
     <button class="mode" data-r="signs">Знаки</button>
@@ -363,16 +369,16 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 </div>
 </div>
 
-<button class="ai-edge" id="aiEdge" aria-label="Открыть разбор с ИИ"><span>✦</span><span class="ai-edge-label">Разбор с ИИ</span></button>
+<button class="ai-edge" id="aiEdge" aria-label="Открыть разбор с ИИ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.7A8 8 0 1 1 21 12Z"/></svg><span class="ai-edge-label">Разбор с ИИ</span></button>
 
 <aside id="aiDrawer" aria-label="Обсуждение с ИИ">
+  <button class="ai-handle" id="aiHandle" aria-label="Свернуть чат"><i></i></button>
   <div class="ai-head">
-    <span style="color:var(--yellow)">✦</span>
     <div style="min-width:0">
       <div style="font-family:'Oswald','Golos Text',sans-serif;font-size:14px;letter-spacing:.05em;text-transform:uppercase">Разбор с ИИ</div>
       <div class="ai-ctx" id="aiCtx"></div>
     </div>
-    <button class="ai-gear" id="aiGear" title="Ключ и модель" hidden>⚙</button>
+    <button class="ai-gear" id="aiGear" title="Ключ и модель" hidden>⚙ настройки</button>
     <button class="ai-close" id="aiClose" title="Закрыть">✕</button>
   </div>
   <div class="ai-panel" id="aiPanel">
@@ -1071,7 +1077,7 @@ function refCard(kind,it){
   card.className="ref-card";
   card.innerHTML='<div class="rc-head">'+(it.img?'<img loading="lazy" alt="" src="'+it.img+'">':'')+
     '<div><div class="rc-num">'+it.n+'</div><div class="rc-title">'+(it.t||"")+'</div></div></div>'+
-    '<p class="rc-desc"></p><button class="rc-ask">✦ Спросить ИИ</button>';
+    '<p class="rc-desc"></p><button class="rc-ask">Спросить ИИ</button>';
   card.querySelector(".rc-desc").textContent=it.d;
   card.dataset.search=(it.n+" "+it.t+" "+it.d).toLowerCase();
   card.onclick=function(e){
@@ -1090,7 +1096,7 @@ function drawRef(){
       AIREFS["ref:"+key]={label:"КоАП "+p.a,body:"Статья КоАП "+p.a+": "+p.t+" Наказание: "+p.p};
       var row=document.createElement("div");
       row.className="pen-row";
-      row.innerHTML='<span class="pa">КоАП '+p.a+'</span><p class="pt"></p><p class="pp"></p><button class="rc-ask" style="display:inline-block">✦ Спросить ИИ</button>';
+      row.innerHTML='<span class="pa">КоАП '+p.a+'</span><p class="pt"></p><p class="pp"></p><button class="rc-ask" style="display:inline-block">Спросить ИИ</button>';
       row.querySelector(".pt").textContent=p.t;
       row.querySelector(".pp").textContent=p.p;
       row.dataset.search=(p.a+" "+p.t+" "+p.p).toLowerCase();
@@ -1277,6 +1283,17 @@ $("aiToggle").onclick=function(){
 };
 $("aiEdge").onclick=aiOpenDrawer;
 $("aiClose").onclick=function(){document.body.classList.remove("ai-open");};
+$("aiHandle").onclick=function(){document.body.classList.remove("ai-open");};
+(function(){
+  var startY=null,dr=document.getElementById("aiDrawer");
+  dr.addEventListener("touchstart",function(e){
+    startY=(e.target.closest&&e.target.closest("#aiHandle,.ai-head"))?e.touches[0].clientY:null;
+  },{passive:true});
+  dr.addEventListener("touchmove",function(e){
+    if(startY===null)return;
+    if(e.touches[0].clientY-startY>60){startY=null;document.body.classList.remove("ai-open");}
+  },{passive:true});
+})();
 document.addEventListener("keydown",function(e){
   if(e.key==="Escape"){document.body.classList.remove("ai-open");closeGroups();}
 });
