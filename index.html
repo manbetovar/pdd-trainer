@@ -241,6 +241,10 @@ body.ai-open #aiDrawer{transform:none}
 footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 :focus-visible{outline:2px solid var(--red);outline-offset:2px}
 @media(max-width:760px){.quiz{grid-template-columns:1fr}}
+@media(max-width:999px){
+  #aiDrawer{left:0;width:100vw;border-left:none;transform:translateY(105%)}
+  .ai-close{width:42px;height:42px;border:1px solid var(--hair-d);border-radius:10px;font-size:20px;padding:0;display:flex;align-items:center;justify-content:center;flex:none}
+}
 </style>
 </head>
 <body>
@@ -253,7 +257,7 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
     <div class="side-sub">билеты ГИБДД A/B</div>
   </div>
   <a class="side-tab" data-view="training" href="#training"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12.5l3 3 5.5-6.5"/></svg><span>Тренировка</span></a>
-  <a class="side-tab" data-view="theory" href="#theory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M19 21V3M5 7h14M5 12h14M5 17h14"/></svg><span>Очерёдность</span></a>
+  <a class="side-tab" data-view="theory" href="#theory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M19 21V3M5 7h14M5 12h14M5 17h14"/></svg><span>Шпаргалки</span></a>
   <a class="side-tab" data-view="refbook" href="#refbook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 22 20.5H2Z"/><path d="M12 10v4.5"/><path d="M12 17.6v.01"/></svg><span>Справочник</span></a>
   <div class="side-stat" id="sideStat"><span id="sideStatTxt"></span><span class="bar"><i id="sideStatBar"></i></span></div>
 </nav>
@@ -275,6 +279,16 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
     <div class="tcell"><span class="rung-tag">Ступень 4</span><h3>Тип дороги и выезды</h3><p>Асфальт главнее грунтовки. Не смог определить покрытие — считай себя на второстепенной. Выезд со двора или заправки — не перекрёсток: уступаешь всем на дороге, включая тех, кто слева.</p><div class="refs"><span class="ref">8.3</span><span class="ref">8.12</span><span class="ref">13.13</span></div><div class="cases"><span>Анимация:</span><a href="trenazher.html#case=2">▶ 2 · асфальт против грунтовки</a><a href="trenazher.html#case=6">▶ 6 · выезд из двора</a></div><p class="qlink"><a href="#training" data-topic="Начало движения, маневрирование">Вопросы темы (111) →</a></p></div>
     <div class="tcell"><span class="rung-tag">Ступень 5</span><h3>Кто справа</h3><p>Только на равнозначном. Помеха есть, если траектории реально пересекаются. Поворот налево — два пропуска подряд: сначала правые (13.11), потом встречные (13.12). Трамвай бьёт стороны, кольцо главнее въезжающих.</p><div class="refs"><span class="ref">13.11</span><span class="ref">13.12</span><span class="ref">13.11(1)</span></div><div class="cases"><span>Анимация:</span><a href="trenazher.html#case=1">▶ 1 · классика</a><a href="trenazher.html#case=5">▶ 5 · поворот налево</a><a href="trenazher.html#case=7">▶ 7 · трамвай слева</a><a href="trenazher.html#case=10">▶ 10 · кольцо</a><a href="trenazher.html#case=11">▶ 11 · клинч</a></div><p class="qlink"><a href="#training" data-topic="Проезд перекрестков">Вопросы темы (111) →</a></p></div>
     <div class="tcell"><span class="rung-tag off">Вне лестницы</span><h3>Перестроение и манёвры</h3><p>Одновременное перестроение — левый уступает правому. Разворот вне перекрёстка — уступи встречным и попутному трамваю. П. 8.9 — резерв для мест, где очерёдность ничем не определена.</p><div class="refs"><span class="ref">8.4</span><span class="ref">8.8</span><span class="ref">8.9</span></div><div class="cases"><span>Анимация:</span><a href="trenazher.html#case=12">▶ 12 · одновременное перестроение</a></div><p class="qlink"><a href="#training" data-topic="Начало движения, маневрирование">Вопросы темы (111) →</a></p></div>
+  </div>
+
+  <h2 style="margin:36px 0 6px">Другие шпаргалки</h2>
+  <p style="max-width:60ch;color:var(--ink-2);margin-bottom:24px">Темы, где вместо зубрёжки работает одна таблица или короткое правило.</p>
+
+  <div class="theory-grid">
+    <div class="tcell"><span class="rung-tag">Метры</span><h3>Остановка и стоянка</h3><p>Остановка запрещена: на зебре и ближе 5 м перед ней; на пересечении и ближе 5 м от края пересекаемой дороги; ближе 15 м от остановки автобуса; на переезде, в тоннеле, на мосту; на трамвайных путях. Стоянка — всё то же плюс: ближе 50 м от ЖД-переезда и вне города на дороге со знаком «Главная».</p><div class="refs"><span class="ref">12.4</span><span class="ref">12.5</span></div><p class="qlink"><a href="#training" data-topic="Остановка и стоянка">Вопросы темы (42) →</a></p></div>
+    <div class="tcell"><span class="rung-tag">Таблица</span><h3>Скорость</h3><p>Жилая зона и дворы — 20. Город — 60. Вне города — 90, автомагистраль — 110. С прицепом вне города — 70, на магистрали — 90. Буксировка — 50. Мопед — 50. На экзамене «разрешённая скорость» — всегда из этой таблицы, без поправки на нештрафуемые +20.</p><div class="refs"><span class="ref">10.1–10.4</span></div><p class="qlink"><a href="#training" data-topic="Скорость движения">Вопросы темы (17) →</a></p></div>
+    <div class="tcell"><span class="rung-tag">Где нельзя</span><h3>Обгон</h3><p>Запрещён: на пешеходных переходах — всегда; на переезде и ближе 100 м перед ним; на мостах, эстакадах и в тоннелях; в конце подъёма и на опасных поворотах; на регулируемых перекрёстках, а на нерегулируемых — если ты не на главной. И нельзя начинать, если тебя уже обгоняют или впереди начали обгон.</p><div class="refs"><span class="ref">11.2</span><span class="ref">11.4</span></div><p class="qlink"><a href="#training" data-topic="Обгон, опережение, встречный разъезд">Вопросы темы (36) →</a></p></div>
+    <div class="tcell"><span class="rung-tag">Когда что</span><h3>Свет и сигналы</h3><p>Днём — ближний или ходовые огни, всегда. Дальний переключай на ближний за 150 м до встречного — или раньше, если он мигнул. Задние противотуманные — только при недостаточной видимости (меньше 300 м). Сигналить в городе можно только для предотвращения ДТП.</p><div class="refs"><span class="ref">19.1–19.5</span><span class="ref">19.7</span><span class="ref">19.10</span></div><p class="qlink"><a href="#training" data-topic="Пользование внешними световыми приборами и звуковыми сигналами">Вопросы темы (23) →</a></p></div>
   </div>
 
 </section>
