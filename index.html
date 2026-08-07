@@ -1284,32 +1284,42 @@ function mdInline(s){
     .replace(/(^|[\s(])_([^_\n]+)_(?=[\s.,;:)!?]|$)/g,"$1<em>$2</em>");
 }
 function mdRender(src){
-  var out=[],list=null,code=null;
+  var out=[],list=null,items=[],code=null,blank=false;
+  function flushList(){
+    if(!list)return;
+    out.push("<"+list+">"+items.map(function(t){return "<li>"+mdInline(t)+"</li>";}).join("")+"</"+list+">");
+    list=null;items=[];
+  }
   mdEscape(src).split("\n").forEach(function(line){
     if(/^\s*```/.test(line)){
-      if(code===null){code=[];}
+      if(code===null){flushList();code=[];}
       else{out.push("<pre><code>"+code.join("\n")+"</code></pre>");code=null;}
       return;
     }
     if(code!==null){code.push(line);return;}
-    var m;
-    if((m=line.match(/^\s*(?:[-*•])\s+(.*)$/))||(m=line.match(/^\s*\d+[.)]\s+(.*)$/))){
-      var ordered=/^\s*\d/.test(line);
-      if(list!==(ordered?"ol":"ul")){
-        if(list)out.push("</"+list+">");
-        list=ordered?"ol":"ul";
-        out.push("<"+list+">");
-      }
-      out.push("<li>"+mdInline(m[1])+"</li>");
+    if(!line.trim()){blank=true;return;}
+    var m,ordered;
+    if((m=line.match(/^\s*(?:[-*•—])\s+(.*)$/)))ordered=false;
+    else if((m=line.match(/^\s*\d+[.)]\s+(.*)$/)))ordered=true;
+    if(m){
+      var kind=ordered?"ol":"ul";
+      if(list&&list!==kind)flushList();      /* сменился тип списка */
+      list=kind;
+      items.push(m[1]);                       /* пустая строка список НЕ рвёт */
+      blank=false;
       return;
     }
-    if(list){out.push("</"+list+">");list=null;}
-    if((m=line.match(/^\s*#{1,6}\s+(.*)$/))){out.push("<h4>"+mdInline(m[1])+"</h4>");return;}
-    if(!line.trim()){return;}
+    if((m=line.match(/^\s*#{1,6}\s+(.*)$/))){flushList();out.push("<h4>"+mdInline(m[1])+"</h4>");blank=false;return;}
+    if(list&&!blank){                         /* перенос строки внутри пункта */
+      items[items.length-1]+=" "+line.trim();
+      return;
+    }
+    flushList();
     out.push("<p>"+mdInline(line)+"</p>");
+    blank=false;
   });
   if(code!==null)out.push("<pre><code>"+code.join("\n")+"</code></pre>");
-  if(list)out.push("</"+list+">");
+  flushList();
   return out.join("");
 }
 function aiDrawMsgs(){
