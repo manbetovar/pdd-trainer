@@ -33,6 +33,7 @@ body{margin:0;background:var(--concrete);color:var(--ink);font-family:"Golos Tex
 /* ── app shell: sidebar + content ─────── */
 .shell{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:100vh}
 .content{min-width:0}
+.view{padding-top:28px}
 .view[hidden]{display:none}
 .side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px;background:var(--asphalt);color:var(--line);padding:22px 12px 16px;z-index:40}
 .side-brand{padding:2px 12px 18px}
@@ -43,8 +44,6 @@ body{margin:0;background:var(--concrete);color:var(--ink);font-family:"Golos Tex
 .side-tab svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .side-tab:hover{color:var(--line)}
 .side-tab[aria-current="true"]{background:var(--asphalt-2);color:var(--line);border-left-color:var(--yellow)}
-.side-div{height:1px;background:var(--hair-d);margin:10px 12px}
-.ext-mark{margin-left:auto;opacity:.5;font-size:13px}
 .side-stat{margin-top:auto;padding:12px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:var(--steel)}
 .side-stat .bar{display:block;height:3px;margin-top:8px;background:var(--hair-d);border-radius:2px;overflow:hidden}
 .side-stat .bar i{display:block;height:100%;width:0;background:var(--yellow);transition:width .3s ease}
@@ -58,10 +57,9 @@ body.ai-open .ai-edge{transform:translate(110%,-50%);opacity:0;pointer-events:no
 @media(max-width:999px){
   .shell{display:block}
   .side{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;flex-direction:row;justify-content:space-around;gap:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-top:1px solid var(--hair-d);z-index:50}
-  .side-brand,.side-stat,.side-div{display:none}
+  .side-brand,.side-stat{display:none}
   .side-tab{flex-direction:column;gap:4px;font-size:9.5px;letter-spacing:.05em;padding:6px 8px;border-left:none;flex:1;align-items:center;text-align:center}
   .side-tab[aria-current="true"]{background:none;color:var(--yellow)}
-  .ext-mark{display:none}
   .content{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
   .ai-edge{writing-mode:horizontal-tb;top:auto;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));transform:none;width:54px;height:54px;border-radius:50%;padding:0;justify-content:center;font-size:20px;letter-spacing:0;box-shadow:0 6px 20px rgba(0,0,0,.3)}
   .ai-edge .ai-edge-label{display:none}
@@ -70,17 +68,12 @@ body.ai-open .ai-edge{transform:translate(110%,-50%);opacity:0;pointer-events:no
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .eyebrow{font-weight:600;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;font-family:"Oswald","Golos Text",sans-serif}
 h1,h2,h3{font-family:"Oswald","Golos Text",sans-serif;font-weight:500;line-height:1.1;margin:0}
-h1{font-size:clamp(30px,4.5vw,46px)}
 h2{font-size:clamp(22px,3vw,30px)}
 p{margin:0 0 1em}
 a{color:inherit}
-.hero{padding:36px 0 4px}
-.hero .lead{max-width:52ch;font-size:17px;color:var(--ink-2);margin-top:20px}
-.hero h1 em{font-style:normal;color:var(--red)}
-.hero .total{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;color:var(--muted);margin-top:18px}
+.total{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;color:var(--muted);margin:0 0 20px}
 .tr-link{display:inline-block;margin-top:18px;font-family:"Oswald","Golos Text",sans-serif;font-size:13px;letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:var(--concrete);padding:12px 20px;border-radius:var(--r-sm);text-decoration:none}
 .tr-link:hover{background:var(--asphalt-2)}
-.marking{height:2px;background:repeating-linear-gradient(90deg,var(--ink) 0 28px,transparent 28px 56px);opacity:.2;margin:52px 0}
 
 /* ── theory cards ─────────────────────── */
 .theory-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
@@ -241,31 +234,22 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
     <div class="side-logo">ПДД</div>
     <div class="side-sub">билеты ГИБДД A/B</div>
   </div>
-  <a class="side-tab" data-view="theory" href="#theory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M19 21V3M5 7h14M5 12h14M5 17h14"/></svg><span>Теория</span></a>
   <a class="side-tab" data-view="training" href="#training"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12.5l3 3 5.5-6.5"/></svg><span>Тренировка</span></a>
+  <a class="side-tab" data-view="theory" href="#theory"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M19 21V3M5 7h14M5 12h14M5 17h14"/></svg><span>Очерёдность</span></a>
   <a class="side-tab" data-view="refbook" href="#refbook"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 22 20.5H2Z"/><path d="M12 10v4.5"/><path d="M12 17.6v.01"/></svg><span>Справочник</span></a>
-  <div class="side-div"></div>
-  <a class="side-tab side-ext" href="trenazher.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/></svg><span>Тренажёр</span><span class="ext-mark">↗</span></a>
   <div class="side-stat" id="sideStat"><span id="sideStatTxt"></span><span class="bar"><i id="sideStatBar"></i></span></div>
 </nav>
 
 <div class="content">
 <main class="wrap">
 
-<section class="view" id="view-theory">
+<section class="view" id="view-theory" hidden>
 
-  <header class="hero">
-    <p class="eyebrow">ПДД РФ · официальные билеты ГИБДД · категории A/B</p>
-    <h1>Вся база билетов,<br>один <em>файл</em></h1>
-    <p class="lead">Полный банк экзаменационных вопросов: решай по темам или по билетам — прогресс общий. У каждого вопроса с дорожной ситуацией — схема-анимация сверху: видно, кто за кем едет и что будет, если поехать не в свою очередь. Файл работает откуда угодно без сервера.</p>
-    <p class="total" id="heroStat"></p>
-    <a class="tr-link" href="trenazher.html">Тренажёр очерёдности с анимацией →</a>
-  </header>
-
-  <div class="marking"></div>
-
-  <h2 style="margin-bottom:6px">Лестница приоритета — краткая теория</h2>
-  <p style="max-width:60ch;color:var(--ink-2);margin-bottom:24px">Пять ступеней сверху вниз; останавливаешься на первой сработавшей. Сработала любая из первых четырёх — «кто справа» не рассматривается вообще.</p>
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px">
+    <h2 style="margin:0">Лестница приоритета</h2>
+    <a class="tr-link" style="margin:0;background:var(--yellow);color:var(--ink)" href="trenazher.html">▶ 12 анимированных разборов</a>
+  </div>
+  <p style="max-width:60ch;color:var(--ink-2);margin-bottom:24px">Кто едет первым. Пять ступеней сверху вниз; останавливаешься на первой сработавшей. Сработала любая из первых четырёх — «кто справа» не рассматривается вообще.</p>
 
   <div class="theory-grid">
     <div class="tcell"><span class="rung-tag">Ступени 1–2</span><h3>Регулировщик и светофор</h3><p>Есть регулировщик — смотришь только на него, он отменяет и светофор, и знаки. Работающий светофор — только сигнал, знаки приоритета спят. Мигающий жёлтый или погасший светофор выключает ступень: падаешь на знаки, а не сразу на «кто справа».</p><div class="refs"><span class="ref">6.2</span><span class="ref">6.10</span><span class="ref">13.3</span><span class="ref">13.4–13.8</span></div><div class="cases"><span>Анимация:</span><a href="trenazher.html#case=8">▶ 8 · мигающий жёлтый</a></div><p class="qlink"><a href="#training" data-topic="Сигналы светофора и регулировщика">Вопросы темы (42) →</a></p></div>
@@ -277,12 +261,10 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 
 </section>
 
-<section class="view" id="view-training" hidden>
+<section class="view" id="view-training">
 
-  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px">
-    <h2 style="margin:0">Тренировка</h2>
-    <a class="tr-link" style="margin:0;background:var(--yellow);color:var(--ink)" href="trenazher.html">▶ Анимация очерёдности — 12 разборов</a>
-  </div>
+  <h2 style="margin-bottom:4px">Тренировка</h2>
+  <p class="total" id="heroStat"></p>
 
   <nav class="modes" id="modes" aria-label="Режим">
     <button class="mode" data-m="0">По темам</button>
@@ -1326,7 +1308,7 @@ var bootView=location.hash.slice(1);
 if(VIEWS.indexOf(bootView)<0){
   try{bootView=localStorage.getItem("pdd-view");}catch(e){}
 }
-setView(VIEWS.indexOf(bootView)>=0?bootView:"theory");
+setView(VIEWS.indexOf(bootView)>=0?bootView:"training");
 
 /* ── PWA: офлайн-кэш (работает только с https-хостинга) ── */
 if("serviceWorker" in navigator&&location.protocol==="https:"){
