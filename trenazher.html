@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Помеха справа — тренажёр очерёдности проезда</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --concrete:#E5E4DF;
+  --concrete-2:#D9D8D2;
+  --asphalt:#24272A;
+  --asphalt-2:#2E3236;
+  --asphalt-3:#3A3F43;
+  --line:#F0EEE7;
+  --yellow:#F0C020;
+  --red:#C63B31;
+  --green:#2F9E63;
+  --blue:#4FA3E3;
+  --amber:#E8B23A;
+  --ink:#1A1C1E;
+  --muted:#6E7479;
+  --hair:rgba(26,28,30,.14);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--concrete);color:var(--ink);
+  font-family:"Golos Text",system-ui,sans-serif;font-size:16px;line-height:1.65;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.eyebrow{
+  font-family:"Oswald",sans-serif;font-weight:500;font-size:12px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 14px;
+}
+h1,h2,h3{font-family:"Oswald",sans-serif;font-weight:500;line-height:1.08;margin:0}
+h1{font-size:clamp(38px,6.2vw,76px);letter-spacing:-.01em}
+h2{font-size:clamp(24px,3.4vw,34px)}
+h3{font-size:19px;letter-spacing:.01em}
+p{margin:0 0 1em}
+code,.mono{font-family:"JetBrains Mono",monospace;font-size:.86em}
+a{color:inherit}
+
+/* ── hero ─────────────────────────────── */
+.hero{padding:64px 0 0}
+.hero .lead{max-width:44ch;font-size:18px;color:#3A3E42;margin-top:24px}
+.hero h1 em{font-style:normal;color:var(--red)}
+.tape{
+  margin-top:52px;background:var(--asphalt);border-radius:3px;
+  padding:28px 24px;position:relative;overflow:hidden;
+}
+.tape::before{
+  content:"";position:absolute;left:0;right:0;top:50%;height:3px;transform:translateY(-50%);
+  background:repeating-linear-gradient(90deg,var(--line) 0 34px,transparent 34px 68px);opacity:.16;
+}
+.rungs-h{display:flex;flex-wrap:wrap;gap:10px;position:relative}
+.rung-chip{
+  font-family:"Oswald",sans-serif;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  color:#9AA1A6;border:1px solid rgba(240,238,231,.18);padding:9px 14px;border-radius:2px;
+  background:rgba(240,238,231,.03);
+}
+.rung-chip.last{color:var(--yellow);border-color:var(--yellow)}
+.tape-note{color:#9AA1A6;font-size:14px;margin:18px 0 0;position:relative;max-width:56ch}
+.tape-note b{color:var(--line);font-weight:500}
+
+/* ── divider ──────────────────────────── */
+.marking{height:2px;background:repeating-linear-gradient(90deg,var(--ink) 0 28px,transparent 28px 56px);opacity:.2;margin:72px 0}
+
+/* ── tier nav ─────────────────────────── */
+.tiers{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 28px}
+.tab{
+  font-family:"Oswald",sans-serif;font-size:13px;letter-spacing:.04em;text-transform:uppercase;
+  background:transparent;border:1px solid var(--hair);color:var(--muted);
+  padding:8px 13px;border-radius:2px;cursor:pointer;transition:.15s;
+}
+.tab:hover{border-color:var(--ink);color:var(--ink)}
+.tab[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--concrete)}
+.tab .t{display:block;font-size:9px;letter-spacing:.16em;opacity:.55;margin-bottom:1px}
+
+/* ── stage ────────────────────────────── */
+.stage{display:grid;grid-template-columns:104px minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+
+.rail{position:sticky;top:24px;background:var(--asphalt);border-radius:3px;padding:14px 10px;overflow:hidden}
+.rail::before{
+  content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);
+  background:repeating-linear-gradient(180deg,var(--line) 0 14px,transparent 14px 28px);opacity:.1;
+}
+.rail-t{font-family:"Oswald",sans-serif;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#7C8388;text-align:center;margin-bottom:12px;position:relative}
+.step{
+  position:relative;text-align:center;padding:10px 4px;border-radius:2px;margin-bottom:6px;
+  border:1px solid transparent;transition:.2s;
+}
+.step .n{font-family:"Oswald",sans-serif;font-size:15px;color:#6E767C;display:block}
+.step .l{font-size:10px;line-height:1.3;color:#6E767C;display:block;margin-top:2px}
+.step.dead .n,.step.dead .l{color:#464C51}
+.step.on{background:var(--yellow);border-color:var(--yellow)}
+.step.on .n,.step.on .l{color:var(--asphalt)}
+.step.on .n{font-weight:600}
+.rail-off{font-size:10px;color:#7C8388;text-align:center;line-height:1.4;padding:8px 2px;position:relative}
+
+.board{background:var(--asphalt);border-radius:3px;padding:14px}
+.board svg{display:block;width:100%;height:auto;border-radius:2px}
+.ctl{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.btn{
+  font-family:"Oswald",sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  background:transparent;color:#B7BDC1;border:1px solid rgba(240,238,231,.22);
+  padding:8px 14px;border-radius:2px;cursor:pointer;transition:.15s;
+}
+.btn:hover{border-color:var(--line);color:var(--line)}
+.btn[disabled]{opacity:.35;cursor:default}
+.btn.crash{color:#E5837C;border-color:rgba(198,59,49,.5)}
+.legend{margin-left:auto;display:flex;gap:14px;font-size:11px;color:#7C8388;align-items:center}
+.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+/* ── panel ────────────────────────────── */
+.panel{padding-top:2px}
+.case-n{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);letter-spacing:.05em}
+.panel h2{margin:6px 0 14px}
+.setup{color:#3A3E42;margin-bottom:22px}
+.q{font-family:"Oswald",sans-serif;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.opts{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+.opt{
+  text-align:left;font-family:inherit;font-size:15px;color:var(--ink);
+  background:var(--concrete-2);border:1px solid transparent;border-left:3px solid var(--hair);
+  padding:12px 16px;border-radius:0;cursor:pointer;transition:.15s;
+}
+.opt:hover{border-left-color:var(--ink)}
+.opt.right{background:rgba(47,158,99,.14);border-left-color:var(--green)}
+.opt.wrong{background:rgba(198,59,49,.12);border-left-color:var(--red);color:#8E3128}
+.opt[disabled]{cursor:default}
+.opt[disabled]:hover{border-left-color:var(--hair)}
+.opt.right[disabled]:hover{border-left-color:var(--green)}
+.opt.wrong[disabled]:hover{border-left-color:var(--red)}
+
+.reveal{border-top:2px solid var(--hair);padding-top:20px}
+.reveal[hidden]{display:none}
+.verdict{font-family:"Oswald",sans-serif;font-size:22px;margin-bottom:4px}
+.verdict.ok{color:var(--green)}
+.verdict.no{color:var(--red)}
+.rung-say{font-size:13px;color:var(--muted);margin-bottom:14px}
+.refs{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
+.ref{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--ink);color:var(--concrete);padding:3px 9px;border-radius:2px}
+.trap{border-left:3px solid var(--yellow);padding:10px 0 10px 14px;margin-top:16px;font-size:14px;color:#3A3E42}
+.trap b{font-family:"Oswald",sans-serif;font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:11px;display:block;color:var(--muted);margin-bottom:3px}
+
+.nav{display:flex;gap:10px;margin-top:26px;align-items:center}
+.nav .btn{color:var(--muted);border-color:var(--hair)}
+.nav .btn:hover{color:var(--ink);border-color:var(--ink)}
+.progress{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted)}
+
+/* ── cheat ────────────────────────────── */
+.cheat{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:2px;background:var(--hair);border:1px solid var(--hair)}
+.cell{background:var(--concrete);padding:22px}
+.cell h3{margin-bottom:8px}
+.cell p{font-size:14px;color:#3A3E42;margin:0}
+.cell .mono{color:var(--muted);display:block;margin-top:8px}
+footer{padding:60px 0 80px;color:var(--muted);font-size:13px}
+
+:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+@media (max-width:900px){
+  .stage{grid-template-columns:1fr}
+  .rail{position:static;display:flex;gap:6px;align-items:stretch}
+  .rail::before{display:none}
+  .rail-t{display:none}
+  .step{flex:1;margin-bottom:0;padding:8px 2px}
+  .rail-off{display:none}
+  .legend{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">ПДД · очерёдность проезда</p>
+    <h1>Помеха справа —<br>не первое правило,<br>а <em>последнее</em></h1>
+    <p class="lead">Путаница почти всегда в одном: правило ищут сразу. А оно стоит пятым в очереди и включается только тогда, когда первые четыре ступени пустые. Ниже — двенадцать ситуаций с анимацией, от базовой до клинча.</p>
+
+    <div class="tape">
+      <div class="rungs-h">
+        <span class="rung-chip">1 · Регулировщик</span>
+        <span class="rung-chip">2 · Светофор</span>
+        <span class="rung-chip">3 · Знаки приоритета</span>
+        <span class="rung-chip">4 · Тип дороги</span>
+        <span class="rung-chip last">5 · Кто справа</span>
+      </div>
+      <p class="tape-note">Идёшь сверху вниз и останавливаешься на первой сработавшей ступени. <b>Сработала любая из первых четырёх — про «справа» забыл вообще.</b></p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap"><div class="marking"></div></div>
+
+<main class="wrap">
+  <nav class="tiers" id="tabs" aria-label="Ситуации"></nav>
+
+  <section class="stage">
+    <aside class="rail" id="rail" aria-label="Лестница приоритета"></aside>
+
+    <div class="board">
+      <svg id="scene" viewBox="0 0 400 400" role="img" aria-labelledby="scene-t">
+        <title id="scene-t">Схема ситуации сверху</title>
+      </svg>
+      <div class="ctl">
+        <button class="btn" id="play">▶ Проиграть</button>
+        <button class="btn crash" id="crash" disabled>А если поехать</button>
+        <span class="legend">
+          <span><i class="dot" style="background:#4FA3E3"></i>ты</span>
+          <span><i class="dot" style="background:#E8B23A"></i>другие</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="case-n" id="caseN"></span>
+      <h2 id="caseName"></h2>
+      <p class="setup" id="caseSetup"></p>
+
+      <p class="q">Что делаешь</p>
+      <div class="opts" id="opts"></div>
+
+      <div class="reveal" id="reveal" hidden>
+        <p class="verdict" id="verdict"></p>
+        <p class="rung-say" id="rungSay"></p>
+        <p id="explain"></p>
+        <div class="trap" id="trapBox"><b>Где обычно ошибаются</b><span id="trap"></span></div>
+        <div class="refs" id="refs"></div>
+      </div>
+
+      <div class="nav">
+        <button class="btn" id="prev">← Назад</button>
+        <button class="btn" id="next">Дальше →</button>
+        <span class="progress" id="prog"></span>
+      </div>
+    </div>
+  </section>
+
+  <div class="marking"></div>
+
+  <h2 style="margin-bottom:8px">Где правило вообще живёт</h2>
+  <p style="max-width:60ch;color:#3A3E42;margin-bottom:26px">Три места. Больше нигде «кто справа» не применяется — во всех остальных случаях приоритет определён чем-то другим.</p>
+  <section class="cheat">
+    <div class="cell"><h3>Равнозначный перекрёсток</h3><p>Ни светофора, ни знаков, покрытие одинаковое. Уступаешь тому, кто справа.<span class="mono">п. 13.11</span></p></div>
+    <div class="cell"><h3>Одновременное перестроение</h3><p>Двое лезут в одну полосу. Левый уступает правому.<span class="mono">п. 8.4</span></p></div>
+    <div class="cell"><h3>Пересечение вне перекрёстка</h3><p>Дворы, парковки, площадки, где приоритет не определён ничем.<span class="mono">п. 8.9</span></p></div>
+  </section>
+
+  <div class="marking"></div>
+
+  <h2 style="margin-bottom:8px">Физика на подъезде</h2>
+  <section class="cheat" style="margin-top:26px">
+    <div class="cell"><h3>50 метров</h3><p>Глаза вверх и по сторонам: светофор, знаки, чем покрыта поперечная дорога. Здесь уже понятно, будет ли «справа» в игре.</p></div>
+    <div class="cell"><h3>20–30 метров</h3><p>Сброс до скорости, с которой успеваешь встать. Если ничего не увидел — перекрёсток равнозначный, смотри направо.</p></div>
+    <div class="cell"><h3>Край пересечения</h3><p>Точка решения. Всё решается до неё. Заехал — вопрос закрыт, внутри перекрёстка правило уже не работает.</p></div>
+    <div class="cell"><h3>Порядок взгляда</h3><p>Справа → слева → снова справа. Последний взгляд перед въездом всегда направо: оттуда единственная угроза, которой ты обязан уступить.</p></div>
+  </section>
+</main>
+
+<footer class="wrap">Тренажёр по ПДД РФ. Нумерация пунктов — по действующей редакции; в спорных ситуациях смотри первоисточник.</footer>
+
+<script>
+(function(){
+"use strict";
+var SVGNS="http://www.w3.org/2000/svg";
+var C=200,R=55,LN=27,RING=85,ISL=44;
+var COL={asphalt:"#2E3236",dirt:"#4A423A",yard:"#383C40",line:"#F0EEE7",you:"#4FA3E3",other:"#E8B23A",tram:"#C63B31",yellow:"#F0C020",red:"#C63B31"};
+
+/* geometry: entry / exit points and headings for each arm */
+var IN ={S:{p:[C+LN,400],d:[0,-1]},N:{p:[C-LN,0],d:[0,1]},W:{p:[0,C+LN],d:[1,0]},E:{p:[400,C-LN],d:[-1,0]}};
+var OUT={N:{p:[C+LN,0],d:[0,-1]},S:{p:[C-LN,400],d:[0,1]},E:{p:[400,C+LN],d:[1,0]},W:{p:[0,C-LN],d:[-1,0]}};
+
+function crossPath(from,to){
+  var i=IN[from],o=OUT[to];
+  if(i.d[0]===0&&o.d[0]===0) return "M"+i.p+" L"+[i.p[0],o.p[1]];
+  if(i.d[1]===0&&o.d[1]===0) return "M"+i.p+" L"+[o.p[0],i.p[1]];
+  var cx=i.d[0]===0?i.p[0]:o.p[0], cy=i.d[0]===0?o.p[1]:i.p[1], r=36;
+  var p1=[cx-i.d[0]*r,cy-i.d[1]*r], p2=[cx+o.d[0]*r,cy+o.d[1]*r];
+  return "M"+i.p+" L"+p1+" Q"+[cx,cy]+" "+p2+" L"+o.p;
+}
+function ang(dx,dy){return Math.atan2(dy,dx)*180/Math.PI;}
+var RIN ={S:ang(LN,Math.sqrt(RING*RING-LN*LN)),E:ang(Math.sqrt(RING*RING-LN*LN),-LN),
+          N:ang(-LN,-Math.sqrt(RING*RING-LN*LN)),W:ang(-Math.sqrt(RING*RING-LN*LN),LN)};
+var ROUT={N:ang(LN,-Math.sqrt(RING*RING-LN*LN)),E:ang(Math.sqrt(RING*RING-LN*LN),LN),
+          S:ang(-LN,Math.sqrt(RING*RING-LN*LN)),W:ang(-Math.sqrt(RING*RING-LN*LN),-LN)};
+function ringPath(from,to,startOnRing){
+  var a=RIN[from],b=ROUT[to],pts=[],t;
+  if(!startOnRing){ pts.push(IN[from].p.join(",")); }
+  var span=a-b; while(span<0)span+=360; if(span<1)span+=360;
+  for(t=0;t<=span;t+=4){
+    var th=(a-t)*Math.PI/180;
+    pts.push((C+RING*Math.cos(th)).toFixed(1)+","+(C+RING*Math.sin(th)).toFixed(1));
+  }
+  var thb=b*Math.PI/180;
+  pts.push((C+RING*Math.cos(thb)).toFixed(1)+","+(C+RING*Math.sin(thb)).toFixed(1));
+  pts.push(OUT[to].p.join(","));
+  return "M"+pts[0]+" L"+pts.slice(1).join(" L");
+}
+
+/* ── scenarios ─────────────────────────────────────────── */
+var YIELD="Уступаю", GO="Еду первым", NONE="ПДД не решает";
+var S=[
+{tier:"База",name:"Классика",
+ arms:{N:"road",E:"road",S:"road",W:"road"},
+ cars:[{from:"S",to:"N",you:1,order:2},{from:"E",to:"W",order:1}],
+ setup:"Ни светофора, ни знаков. Асфальт с обеих сторон. Ты едешь прямо, справа приближается машина — тоже прямо.",
+ opts:[GO,YIELD],ok:1,rung:5,refs:["13.11"],
+ rungSay:"Первые четыре ступени пустые — сработала пятая.",
+ ex:"Перекрёсток равнозначный: приоритет не определён ни регулировщиком, ни светофором, ни знаками, ни типом покрытия. Только здесь включается «кто справа». Он справа от тебя → ты уступаешь. А он едет, потому что справа от него — пустой рукав: для него помехи нет. Каждый смотрит только направо от себя, и картинки сходятся.",
+ trap:"Проверяй пересечение траекторий. Если он справа, но поворачивает направо, а ты едешь прямо — вы не встретитесь, помехи нет."},
+
+{tier:"База",name:"Асфальт против грунтовки",
+ arms:{N:"road",E:"dirt",S:"road",W:"dirt"},
+ cars:[{from:"S",to:"N",you:1,order:1},{from:"E",to:"W",order:2}],
+ setup:"Знаков нет, но поперечная дорога — грунтовая. Машина справа выезжает с неё.",
+ opts:[GO,YIELD],ok:0,rung:4,refs:["13.13"],
+ rungSay:"Сработала четвёртая ступень — до «справа» дело не дошло.",
+ ex:"Дороги неравнозначные: асфальт главнее грунтовки. Ступень «тип дороги» отработала, значит пятая уже не рассматривается. Едешь первым, хоть он и справа.",
+ trap:"Если не уверен в покрытии — считай перекрёсток равнозначным и уступай. ПДД прямо требует так поступать при неопределённости."},
+
+{tier:"База",name:"Ты на главной",
+ arms:{N:"road",E:"road",S:"road",W:"road"},main:"NS",
+ signs:{S:"main",N:"main",E:"yield",W:"yield"},
+ cars:[{from:"S",to:"W",you:1,order:1},{from:"E",to:"W",order:2}],
+ setup:"У тебя знак «главная дорога», поворачиваешь налево. Справа по второстепенной подъезжает машина.",
+ opts:[GO,YIELD],ok:0,rung:3,refs:["13.9"],
+ rungSay:"Сработала третья ступень — сторона больше не имеет значения.",
+ ex:"Знак приоритета снял вопрос стороны. Ты на главной — едешь первым, он на второстепенной и ждёт, независимо от того, что находится справа от тебя.",
+ trap:"Главная не отменяет встречных. Если бы навстречу по главной кто-то ехал прямо, его пришлось бы пропустить — уже по правилу поворота налево, п. 13.12."},
+
+{tier:"База",name:"Ты под «уступи»",
+ arms:{N:"road",E:"road",S:"road",W:"road"},main:"EW",
+ signs:{S:"yield",N:"yield",E:"main",W:"main"},
+ cars:[{from:"S",to:"N",you:1,order:2},{from:"W",to:"E",order:1}],
+ setup:"У тебя «уступите дорогу». Машина идёт по главной слева направо — то есть слева от тебя.",
+ opts:[GO,YIELD],ok:1,rung:3,refs:["13.9"],
+ rungSay:"Третья ступень: уступаешь всем на главной, с любой стороны.",
+ ex:"Под знаком «уступите дорогу» пропускаешь всех, кто движется по пересекаемой дороге — и справа, и слева. Правило «справа» здесь не рассматривается вообще.",
+ trap:"Частая ошибка: «он слева, значит я еду». Слева/справа работает только на равнозначном."},
+
+{tier:"Сложнее",name:"Поворот налево на равнозначном",
+ arms:{N:"road",E:"road",S:"road",W:"road"},
+ cars:[{from:"S",to:"W",you:1,order:3},{from:"E",to:"W",order:1},{from:"N",to:"S",order:2}],
+ setup:"Равнозначный перекрёсток. Ты поворачиваешь налево. Справа идёт машина, и навстречу — вторая, прямо.",
+ opts:[GO,YIELD],ok:1,rung:5,refs:["13.11","13.12"],
+ rungSay:"Пятая ступень, а следом отдельное правило поворота налево.",
+ ex:"Тут два правила подряд, и в этом вся путаница. Сначала по п. 13.11 пропускаешь того, кто справа. Потом, уже начиная поворот, по п. 13.12 пропускаешь встречного, который едет прямо или направо. Ты уезжаешь третьим.",
+ trap:"Люди дожидаются машину справа, выдыхают и трогаются — прямо под встречного. Это два независимых пропуска, а не один."},
+
+{tier:"Сложнее",name:"Выезд из двора",
+ arms:{N:"road",E:"road",S:"yard",W:"road"},
+ cars:[{from:"S",to:"W",you:1,order:2},{from:"W",to:"E",order:1}],
+ setup:"Выезжаешь из двора на дорогу и поворачиваешь. Машина по дороге идёт слева направо.",
+ opts:[GO,YIELD],ok:1,rung:4,refs:["8.3"],
+ rungSay:"Это вообще не перекрёсток — лестница обрывается на четвёртой.",
+ ex:"Выезд с прилегающей территории — двора, парковки, заправки, АЗС — перекрёстком не считается. Уступаешь всем, кто движется по дороге, включая тех, кто слева, и пешеходам с велосипедистами на твоём пути.",
+ trap:"Самая массовая ошибка: люди считают выезд из двора перекрёстком и пытаются применить «справа». Правило здесь не работает ни в какую сторону."},
+
+{tier:"Сложнее",name:"Трамвай слева",
+ arms:{N:"road",E:"tram",S:"road",W:"tram"},
+ cars:[{from:"S",to:"N",you:1,order:2},{from:"W",to:"E",order:1,tram:1}],
+ setup:"Равнозначный перекрёсток. Слева по путям идёт трамвай и пересекает твою дорогу. Будь на его месте машина — уступала бы она.",
+ opts:[GO,YIELD],ok:1,rung:5,refs:["13.11"],
+ rungSay:"Пятая ступень, но трамвай бьёт правило сторон.",
+ ex:"Разверни ситуацию с её стороны: для машины слева ты — помеха справа, поэтому она стоит, а ты едешь. Это одно правило, прочитанное с двух концов. Трамвай эту логику ломает: на равнозначном он имеет преимущество независимо от направления, поэтому трамвай слева едет первым, хотя машина на его месте стояла бы. Условие прежнее — траектории должны реально пересекаться.",
+ trap:"Преимущество трамвая живёт только при равенстве в правах. Если ты на главной, а трамвай выезжает со второстепенной — первым едешь ты."},
+
+{tier:"Сложнее",name:"Мигающий жёлтый",
+ arms:{N:"road",E:"road",S:"road",W:"road"},main:"NS",
+ signs:{S:"main",N:"main",E:"yield",W:"yield"},signal:1,
+ cars:[{from:"S",to:"N",you:1,order:1},{from:"E",to:"W",order:2}],
+ setup:"Светофор мигает жёлтым. Под ним висят знаки: у тебя «главная», у него «уступите дорогу». Он справа.",
+ opts:[GO,YIELD],ok:0,rung:3,refs:["6.2","13.3"],
+ rungSay:"Вторая ступень выключилась — падаешь на третью, а не сразу на пятую.",
+ ex:"Мигающий жёлтый или погасший светофор означает, что перекрёсток нерегулируемый. Но лестница не обрушивается до самого низа: следующей включается ступень знаков. Знаки на месте — едешь первым.",
+ trap:"Увидев мигающий жёлтый, многие сразу переключаются на «помеху справа». Сначала знаки. И только если их нет — покрытие, и только потом стороны."},
+
+{tier:"Жесть",name:"Главная меняет направление",
+ arms:{N:"road",E:"road",S:"road",W:"road"},main:"SE",
+ signs:{S:"main8_13",E:"main",N:"yield",W:"yield"},
+ cars:[{from:"S",to:"N",you:1,order:2},{from:"E",to:"S",order:1}],
+ setup:"Под знаком «главная» табличка 8.13: главная уходит вправо, с юга на восток. Ты идёшь по главной с юга и едешь прямо. Справа по той же главной подходит машина и поворачивает к тебе за спину, на юг.",
+ opts:[GO,YIELD,NONE],ok:1,rung:5,refs:["13.10","13.11"],
+ rungSay:"Пятая — но применённая только между теми, кто на главной.",
+ ex:"Вы оба находитесь на главной дороге, просто она изгибается. Пункт 13.10 говорит: в таком случае между собой участники на главной разъезжаются как на равнозначном перекрёстке. Значит, включается «кто справа» — он справа, уступаешь. Те, кто на второстепенной, ждут вас обоих.",
+ trap:"Табличка 8.13 читается как форма дороги, а не как «мне направо». Смотри на изгиб жирной линии — она показывает, куда идёт главная, а не куда ехать тебе."},
+
+{tier:"Жесть",name:"Кольцо",
+ ring:1,signs:{S:"yield"},
+ cars:[{from:"S",to:"N",you:1,order:2,ring:1},{from:"W",to:"N",order:1,ring:1,onRing:1}],
+ setup:"Подъезжаешь к круговому движению. По кольцу уже едет машина — и она у тебя слева.",
+ opts:[GO,YIELD],ok:1,rung:3,refs:["13.11(1)"],
+ rungSay:"Третья ступень: перед въездом на круг всегда стоит «уступите дорогу».",
+ ex:"С 2017 года при въезде на перекрёсток с круговым движением ты уступаешь всем, кто уже движется по кольцу. Сторона не имеет значения — на кольце машины идут слева, и это нормально. Правило «справа» на въезде не применяется.",
+ trap:"На самом кольце между полосами работает обычное перестроение: съезжаешь с внутренней полосы — уступаешь тем, кто во внешней."},
+
+{tier:"Жесть",name:"Клинч на четверых",
+ arms:{N:"road",E:"road",S:"road",W:"road"},
+ cars:[{from:"S",to:"N",you:1,order:1},{from:"E",to:"W",order:1},{from:"N",to:"S",order:1},{from:"W",to:"E",order:1}],
+ setup:"Равнозначный перекрёсток, машины подошли одновременно со всех четырёх сторон. Каждый едет прямо.",
+ opts:[GO,YIELD,NONE],ok:2,rung:0,refs:["13.11"],
+ rungSay:"Лестница доходит до пятой ступени и упирается в тупик.",
+ ex:"У каждого справа кто-то есть: у тебя восток, у восточного север, у северного запад, у западного ты. Причина и следствие замкнулись в кольцо — каждый обязан уступить, потому что сам является чьей-то помехой справа. ПДД выхода не даёт. Разъезжаются по договорённости — жестом или морганием фар. На практике первым обычно трогается тот, кто поворачивает направо: он никому не мешает.",
+ trap:"Тут нет «правильного» ответа в правилах, и это не баг твоего понимания. Если на экзамене или в жизни ситуация выглядит неразрешимой — скорее всего, ты её верно прочитал."},
+
+{tier:"Жесть",name:"Одновременное перестроение",
+ merge:1,
+ cars:[{from:"L",you:1,order:2,path:"M-30,150 L120,150 C170,150 175,200 225,200 L430,200"},
+       {from:"R",order:1,path:"M-70,250 L100,250 C150,250 155,200 205,200 L430,200"}],
+ setup:"Три полосы, средняя свободна. Ты в левой, он в правой. Вы одновременно решили перестроиться в среднюю.",
+ opts:[GO,YIELD],ok:1,rung:0,refs:["8.4"],
+ rungSay:"Вне лестницы — это правило перестроения, а не перекрёстка.",
+ ex:"При одновременном перестроении уступает тот, кто левее. Ты левее — пропускаешь. Точка решения здесь не край перекрёстка, а момент, когда колесо начинает уходить к разметке.",
+ trap:"Начав манёвр, ты не перестаёшь отвечать за него: по п. 8.1 нельзя создавать помеху всю дорогу. Засомневался — вернулся в свою полосу."}
+];
+
+/* ── rendering ─────────────────────────────────────────── */
+var svg=document.getElementById("scene");
+function el(n,a){var e=document.createElementNS(SVGNS,n);for(var k in a)e.setAttribute(k,a[k]);return e;}
+function dash(x1,y1,x2,y2,o){var l=el("line",{x1:x1,y1:y1,x2:x2,y2:y2,stroke:COL.line,"stroke-width":2,"stroke-dasharray":"12 12",opacity:o||.28});svg.appendChild(l);}
+
+function drawArms(sc){
+  var a=sc.arms||{},k,t;
+  var box=el("rect",{x:C-R,y:C-R,width:2*R,height:2*R,fill:COL.asphalt});
+  var rects={N:[C-R,0,2*R,C-R],S:[C-R,C+R,2*R,400-C-R],W:[0,C-R,C-R,2*R],E:[C+R,C-R,400-C-R,2*R]};
+  for(k in rects){
+    t=a[k]; if(!t)continue;
+    var r=rects[k].slice(),fill=COL.asphalt;
+    if(t==="dirt")fill=COL.dirt;
+    if(t==="yard"){fill=COL.yard;
+      if(k==="N"||k==="S"){r[0]=C-36;r[2]=72;}else{r[1]=C-36;r[3]=72;}}
+    svg.appendChild(el("rect",{x:r[0],y:r[1],width:r[2],height:r[3],fill:fill}));
+  }
+  svg.appendChild(box);
+  for(k in rects){
+    t=a[k]; if(!t||t==="dirt"||t==="yard")continue;
+    if(t==="tram"){
+      var seg=(k==="N"||k==="W")?[0,C-R]:[C+R,400];
+      [-LN,LN].forEach(function(off){
+        [-9,9].forEach(function(rr){
+          if(k==="N"||k==="S")
+            svg.appendChild(el("line",{x1:C+off+rr,y1:seg[0],x2:C+off+rr,y2:seg[1],stroke:COL.line,"stroke-width":1.5,opacity:.25}));
+          else
+            svg.appendChild(el("line",{x1:seg[0],y1:C+off+rr,x2:seg[1],y2:C+off+rr,stroke:COL.line,"stroke-width":1.5,opacity:.25}));
+        });
+      });
+      continue;
+    }
+    if(k==="N")dash(C,0,C,C-R); if(k==="S")dash(C,C+R,C,400);
+    if(k==="W")dash(0,C,C-R,C); if(k==="E")dash(C+R,C,400,C);
+  }
+}
+function drawRing(){
+  svg.appendChild(el("rect",{x:C-R,y:0,width:2*R,height:400,fill:COL.asphalt}));
+  svg.appendChild(el("rect",{x:0,y:C-R,width:400,height:2*R,fill:COL.asphalt}));
+  svg.appendChild(el("circle",{cx:C,cy:C,r:RING+R*0.55,fill:COL.asphalt}));
+  svg.appendChild(el("circle",{cx:C,cy:C,r:ISL,fill:"#3E463F",stroke:COL.line,"stroke-width":2,"stroke-opacity":.35}));
+  svg.appendChild(el("circle",{cx:C,cy:C,r:RING,fill:"none",stroke:COL.line,"stroke-width":2,"stroke-dasharray":"10 12",opacity:.22}));
+}
+function drawMerge(){
+  svg.appendChild(el("rect",{x:0,y:110,width:400,height:180,fill:COL.asphalt}));
+  dash(0,170,400,170,.34); dash(0,230,400,230,.34);
+  svg.appendChild(el("line",{x1:0,y1:110,x2:400,y2:110,stroke:COL.line,"stroke-width":2.5,opacity:.5}));
+  svg.appendChild(el("line",{x1:0,y1:290,x2:400,y2:290,stroke:COL.line,"stroke-width":2.5,opacity:.5}));
+}
+var SIGNPOS={S:[C+R+22,C+R+52],N:[C-R-22,C-R-52],E:[C+R+52,C-R-22],W:[C-R-52,C+R+22]};
+function drawSigns(sc){
+  var s=sc.signs||{},k;
+  for(k in s){
+    var p=SIGNPOS[k]; if(!p)continue;
+    var x=p[0],y=p[1],kind=s[k],g=el("g",{});
+    if(kind==="main"||kind==="main8_13"){
+      g.appendChild(el("rect",{x:x-13,y:y-13,width:26,height:26,rx:3,fill:COL.yellow,stroke:"#fff","stroke-width":2.5,transform:"rotate(45 "+x+" "+y+")"}));
+      if(kind==="main8_13"){
+        var pl=el("path",{d:"M"+(x-9)+","+(y+30)+" L"+(x-9)+","+(y+22)+" Q"+(x-9)+","+(y+17)+" "+(x-3)+","+(y+17)+" L"+(x+9)+","+(y+17),fill:"none",stroke:"#1A1C1E","stroke-width":3});
+        g.appendChild(el("rect",{x:x-18,y:y+12,width:36,height:24,rx:2,fill:"#fff",stroke:"#1A1C1E","stroke-width":1.5}));
+        g.appendChild(pl);
+      }
+    }else if(kind==="yield"){
+      g.appendChild(el("path",{d:"M"+(x-15)+","+(y-12)+" L"+(x+15)+","+(y-12)+" L"+x+","+(y+15)+" Z",fill:"#fff",stroke:COL.red,"stroke-width":4,"stroke-linejoin":"round"}));
+    }
+    svg.appendChild(g);
+  }
+  if(sc.signal){
+    var g2=el("g",{});
+    g2.appendChild(el("rect",{x:C-R-40,y:C-R-40,width:20,height:20,rx:3,fill:"#1A1C1E",stroke:"#555","stroke-width":1}));
+    var c=el("circle",{cx:C-R-30,cy:C-R-30,r:6,fill:COL.yellow});
+    c.appendChild(el("animate",{attributeName:"opacity",values:"1;0.15;1",dur:"1s",repeatCount:"indefinite"}));
+    g2.appendChild(c); svg.appendChild(g2);
+  }
+}
+function drawXpoint(sc){
+  if(sc.merge||sc.ring)return;
+  svg.appendChild(el("rect",{x:C-R,y:C-R,width:2*R,height:2*R,fill:"none",stroke:COL.line,"stroke-width":1,"stroke-dasharray":"4 6",opacity:.2}));
+}
+
+/* car sprite */
+function makeCar(c){
+  var g=el("g",{}),col=c.you?COL.you:(c.tram?COL.tram:COL.other);
+  var h=c.tram?66:36,w=c.tram?22:20;
+  g.appendChild(el("rect",{x:-w/2,y:-h/2,width:w,height:h,rx:c.tram?3:5,fill:col}));
+  g.appendChild(el("rect",{x:-w/2+3,y:-h/2+5,width:w-6,height:c.tram?8:9,rx:2,fill:"#1A1C1E",opacity:.42}));
+  if(c.you){
+    g.appendChild(el("circle",{cx:0,cy:-h/2-9,r:3,fill:COL.line,opacity:.75}));
+  }
+  return g;
+}
+
+/* ── animation engine ──────────────────────────────────── */
+var cars=[],raf=null,mode="hold",cur=0,answered=[],reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function build(i){
+  var sc=S[i];
+  while(svg.firstChild&&svg.firstChild.nodeName!=="title")svg.removeChild(svg.firstChild);
+  while(svg.childNodes.length>1)svg.removeChild(svg.lastChild);
+  svg.appendChild(el("rect",{x:0,y:0,width:400,height:400,fill:"#202326"}));
+
+  if(sc.ring)drawRing(); else if(sc.merge)drawMerge(); else drawArms(sc);
+  drawXpoint(sc); if(!sc.merge)drawSigns(sc);
+
+  var hidden=el("g",{opacity:0}); svg.appendChild(hidden);
+  cars=sc.cars.map(function(c){
+    var d=c.path?c.path:(c.ring?ringPath(c.from,c.to,c.onRing):crossPath(c.from,c.to));
+    var p=el("path",{d:d,fill:"none",stroke:"none"}); hidden.appendChild(p);
+    var L=p.getTotalLength();
+    var hold=L,exit=L,s,pt,inside=false;
+    for(s=0;s<=L;s+=3){
+      pt=p.getPointAtLength(s);
+      var isIn=sc.ring?(Math.hypot(pt.x-C,pt.y-C)<RING+30):
+               sc.merge?(pt.x>110):(pt.x>C-R-4&&pt.x<C+R+4&&pt.y>C-R-4&&pt.y<C+R+4);
+      if(isIn&&!inside){hold=Math.max(0,s-26);inside=true;}
+      if(inside&&!isIn){exit=s;break;}
+    }
+    if(inside&&exit===L)exit=L;
+    var sprite=makeCar(c); svg.appendChild(sprite);
+    return {path:p,len:L,hold:hold,exit:exit,order:c.order,you:!!c.you,
+            sprite:sprite,s:0,rel:false,speed:c.tram?70:82,done:false,startOnRing:!!c.onRing};
+  });
+  reset();
+}
+function place(k){
+  var pt=k.path.getPointAtLength(Math.min(k.s,k.len));
+  var pt2=k.path.getPointAtLength(Math.min(k.s+2,k.len));
+  var a=Math.atan2(pt2.y-pt.y,pt2.x-pt.x)*180/Math.PI+90;
+  k.sprite.setAttribute("transform","translate("+pt.x.toFixed(1)+","+pt.y.toFixed(1)+") rotate("+a.toFixed(1)+")");
+  k.sprite.setAttribute("opacity",k.s>=k.len-1?0:1);
+}
+function reset(){
+  cancelAnimationFrame(raf);raf=null;
+  cars.forEach(function(k){k.s=k.startOnRing?4:0;k.rel=false;k.done=false;
+    k.sprite.querySelector("rect").setAttribute("fill",k.you?COL.you:COL.other);place(k);});
+  var f=svg.querySelector(".flash"); if(f)f.remove();
+}
+function run(collide){
+  reset(); mode=collide?"crash":"hold";
+  var last=performance.now(),stopped=false;
+  function frame(t){
+    var dt=Math.min((t-last)/1000,.05); last=t;
+    var i,j,k;
+    for(i=0;i<cars.length;i++){
+      k=cars[i];
+      if(!k.rel&&k.s>=k.hold-1&&mode==="hold"){
+        var free=true;
+        for(j=0;j<cars.length;j++){
+          var o=cars[j];
+          if(o.order<k.order&&!o.done&&o.s<o.exit+12)free=false;
+        }
+        if(free)k.rel=true; else {k.s=k.hold;continue;}
+      }
+      k.s+=k.speed*dt;
+      if(k.s>k.len){k.s=k.len;k.done=true;}
+      place(k);
+    }
+    if(mode==="crash"){
+      for(i=0;i<cars.length&&!stopped;i++)for(j=i+1;j<cars.length;j++){
+        var a=cars[i].path.getPointAtLength(Math.min(cars[i].s,cars[i].len));
+        var b=cars[j].path.getPointAtLength(Math.min(cars[j].s,cars[j].len));
+        if(Math.hypot(a.x-b.x,a.y-b.y)<26&&cars[i].s<cars[i].len&&cars[j].s<cars[j].len){
+          stopped=true;
+          var fl=el("circle",{cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,r:4,fill:"none",stroke:COL.red,"stroke-width":4});
+          fl.setAttribute("class","flash");
+          fl.appendChild(el("animate",{attributeName:"r",values:"6;46",dur:"0.7s",repeatCount:"indefinite"}));
+          fl.appendChild(el("animate",{attributeName:"opacity",values:"1;0",dur:"0.7s",repeatCount:"indefinite"}));
+          svg.appendChild(fl);
+          cars[i].sprite.querySelector("rect").setAttribute("fill",COL.red);
+          cars[j].sprite.querySelector("rect").setAttribute("fill",COL.red);
+          break;
+        }
+      }
+      if(stopped)return;
+    }
+    if(cars.every(function(x){return x.done;})){
+      if(!reduced)setTimeout(function(){if(mode!=="crash")run(false);},900);
+      return;
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+}
+
+/* ── UI ────────────────────────────────────────────────── */
+var RUNGS=["Регулировщик","Светофор","Знаки приоритета","Тип дороги","Кто справа"];
+var rail=document.getElementById("rail");
+function drawRail(rung){
+  rail.innerHTML="";
+  var t=document.createElement("p");t.className="rail-t";t.textContent="Лестница";rail.appendChild(t);
+  RUNGS.forEach(function(name,idx){
+    var n=idx+1,d=document.createElement("div");
+    d.className="step"+(n===rung?" on":(rung&&n<rung?" dead":""));
+    d.innerHTML='<span class="n">'+n+'</span><span class="l">'+name+'</span>';
+    rail.appendChild(d);
+  });
+  if(!rung){var o=document.createElement("p");o.className="rail-off";o.textContent="Вне лестницы";rail.appendChild(o);}
+}
+var tabs=document.getElementById("tabs");
+S.forEach(function(sc,i){
+  var b=document.createElement("button");b.className="tab";
+  b.innerHTML='<span class="t">'+sc.tier+'</span>'+sc.name;
+  b.onclick=function(){show(i);};tabs.appendChild(b);
+});
+function show(i){
+  cur=i;var sc=S[i];
+  Array.prototype.forEach.call(tabs.children,function(b,j){b.setAttribute("aria-current",j===i?"true":"false");});
+  document.getElementById("caseN").textContent="Ситуация "+(i+1)+" / "+S.length+" · "+sc.tier;
+  document.getElementById("caseName").textContent=sc.name;
+  document.getElementById("caseSetup").textContent=sc.setup;
+  document.getElementById("prog").textContent="решено "+answered.filter(Boolean).length+" / "+S.length;
+  var o=document.getElementById("opts");o.innerHTML="";
+  sc.opts.forEach(function(label,k){
+    var b=document.createElement("button");b.className="opt";b.textContent=label;
+    b.onclick=function(){pick(k);};o.appendChild(b);
+  });
+  document.getElementById("reveal").hidden=true;
+  document.getElementById("crash").disabled=true;
+  drawRail(sc.rung);
+  build(i);
+  if(!reduced)run(false);
+}
+function pick(k){
+  var sc=S[cur],right=(k===sc.ok);
+  answered[cur]=true;
+  Array.prototype.forEach.call(document.getElementById("opts").children,function(b,j){
+    b.disabled=true;
+    if(j===sc.ok)b.classList.add("right");
+    else if(j===k)b.classList.add("wrong");
+  });
+  var v=document.getElementById("verdict");
+  v.textContent=right?"Верно — "+sc.opts[sc.ok].toLowerCase():"Мимо — правильно «"+sc.opts[sc.ok].toLowerCase()+"»";
+  v.className="verdict "+(right?"ok":"no");
+  document.getElementById("rungSay").textContent=sc.rungSay;
+  document.getElementById("explain").textContent=sc.ex;
+  document.getElementById("trap").textContent=sc.trap;
+  var r=document.getElementById("refs");r.innerHTML="";
+  sc.refs.forEach(function(x){var s=document.createElement("span");s.className="ref";s.textContent="п. "+x;r.appendChild(s);});
+  document.getElementById("reveal").hidden=false;
+  document.getElementById("crash").disabled=false;
+  document.getElementById("prog").textContent="решено "+answered.filter(Boolean).length+" / "+S.length;
+  run(false);
+}
+document.getElementById("play").onclick=function(){run(false);};
+document.getElementById("crash").onclick=function(){run(true);};
+document.getElementById("prev").onclick=function(){show((cur-1+S.length)%S.length);};
+document.getElementById("next").onclick=function(){show((cur+1)%S.length);};
+document.addEventListener("keydown",function(e){
+  if(e.key==="ArrowRight")show((cur+1)%S.length);
+  if(e.key==="ArrowLeft")show((cur-1+S.length)%S.length);
+});
+/* deep links: trenazher.html#case=N (1-based) */
+function caseFromHash(){
+  var m=/case=(\d+)/.exec(location.hash);
+  if(!m)return -1;
+  var n=parseInt(m[1],10);
+  return (n>=1&&n<=S.length)?n-1:-1;
+}
+var _show=show;
+show=function(i){
+  _show(i);
+  if(history.replaceState)history.replaceState(null,"","#case="+(i+1));
+};
+window.addEventListener("hashchange",function(){
+  var i=caseFromHash();
+  if(i>=0&&i!==cur)_show(i);
+});
+var start=caseFromHash();
+show(start>=0?start:0);
+if(start>=0){
+  var st=document.querySelector(".stage");
+  if(st)setTimeout(function(){st.scrollIntoView({behavior:"auto",block:"start"});},50);
+}
+})();
+</script>
+</body>
+</html>

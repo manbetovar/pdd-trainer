@@ -1,0 +1,15 @@
+{
+  "name": "ПДД — тренажёр билетов",
+  "short_name": "ПДД",
+  "description": "Все билеты ГИБДД A/B: 794 вопроса, 40 билетов, 26 тем, схемы-анимации, справочник знаков и ИИ-разбор",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#24272A",
+  "theme_color": "#24272A",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
