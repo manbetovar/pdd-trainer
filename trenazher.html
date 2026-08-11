@@ -110,8 +110,10 @@ a{color:inherit}
 .btn:hover{border-color:var(--line);color:var(--line)}
 .btn[disabled]{opacity:.35;cursor:default}
 .btn.crash{color:#E5837C;border-color:rgba(198,59,49,.5)}
-.legend{margin-left:auto;display:flex;gap:14px;font-size:11px;color:#7C8388;align-items:center}
-.dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:11px;color:#7C8388;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.sv-verdict{font-size:13px;line-height:1.5;color:#E5A29C;margin:10px 0 0;padding-left:10px;border-left:3px solid #C63B31}
+.sv-verdict[hidden]{display:none}
 
 /* ── panel ────────────────────────────── */
 .panel{padding-top:2px}
@@ -166,7 +168,6 @@ footer{padding:60px 0 80px;color:var(--muted);font-size:13px}
   .rail-t{display:none}
   .step{flex:1;margin-bottom:0;padding:8px 2px}
   .rail-off{display:none}
-  .legend{margin-left:0;width:100%}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
@@ -208,11 +209,9 @@ footer{padding:60px 0 80px;color:var(--muted);font-size:13px}
       <div class="ctl">
         <button class="btn" id="play">▶ Проиграть</button>
         <button class="btn crash" id="crash" disabled>А если поехать</button>
-        <span class="legend">
-          <span><i class="dot" style="background:#4FA3E3"></i>ты</span>
-          <span><i class="dot" style="background:#E8B23A"></i>другие</span>
-        </span>
       </div>
+      <div class="legend" id="legend"></div>
+      <p class="sv-verdict" id="crashSay" hidden></p>
     </div>
 
     <div class="panel">
@@ -284,7 +283,7 @@ function SceneEngine(svg){
 var SVGNS="http://www.w3.org/2000/svg";
 var C=200,R=55,LN=27,RING=85,ISL=44;
 var COL={asphalt:"#2E3236",dirt:"#4A423A",yard:"#383C40",line:"#F0EEE7",
-         you:"#4FA3E3",other:"#E8B23A",tram:"#C63B31",ped:"#8FD48F",bike:"#5FC98F",
+         you:"#4FA3E3",other:"#E8B23A",tram:"#C63B31",ped:"#8FD48F",bike:"#5FC98F",moto:"#E8792F",
          yellow:"#F0C020",red:"#C63B31",green:"#2F9E63"};
 
 var IN ={S:{p:[C+LN,400],d:[0,-1]},N:{p:[C-LN,0],d:[0,1]},W:{p:[0,C+LN],d:[1,0]},E:{p:[400,C-LN],d:[-1,0]}};
@@ -449,27 +448,203 @@ function pedPath(arm,off){
   if(z[2]==="h")return "M"+(z[0]-38)+","+(z[1]+off)+" L"+(z[0]+38)+","+(z[1]+off);
   return "M"+(z[0]+off)+","+(z[1]-38)+" L"+(z[0]+off)+","+(z[1]+38);
 }
+/* Тип участника определяем один раз: от него зависят и спрайт, и скорость,
+   и то, как удар описывается словами. */
+function kindOf(c){
+  if(c.kind)return c.kind;                     /* пешеходы/велосипеды с зебры уже размечены */
+  if(c.tram)return "tram";
+  if(c.moto)return "moto";
+  if(c.bike)return "bike";
+  return "car";
+}
+var KIND_RU={car:"автомобиль",tram:"трамвай",moto:"мотоциклист",bike:"велосипедист",ped:"пешеход"};
+var KIND_ACC={car:"машину",tram:"трамвай",moto:"мотоциклиста",bike:"велосипедиста",ped:"пешехода"};
+
+/* Спрайты рисуем «носом вверх» (вперёд = −Y): place() доворачивает по траектории.
+   Каждый участник должен читаться по силуэту, а не только по цвету — на схеме
+   40×40 экранных пикселей цвет один, а форма разная. */
+function drawSprite(g,kind,col){
+  var dark="#15171A";
+  if(kind==="ped"){
+    g.appendChild(el("ellipse",{cx:0,cy:1.5,rx:6.2,ry:3.6,fill:col,stroke:dark,"stroke-width":1}));
+    g.appendChild(el("circle",{cx:0,cy:-1.5,r:3.6,fill:col,stroke:dark,"stroke-width":1}));
+    g.appendChild(el("circle",{cx:0,cy:-1.5,r:1.4,fill:dark,opacity:.5}));
+    return g;
+  }
+  if(kind==="bike"){
+    g.appendChild(el("circle",{cx:0,cy:-8.5,r:4.2,fill:"none",stroke:dark,"stroke-width":2}));
+    g.appendChild(el("circle",{cx:0,cy:8.5,r:4.2,fill:"none",stroke:dark,"stroke-width":2}));
+    g.appendChild(el("line",{x1:0,y1:-8.5,x2:0,y2:8.5,stroke:col,"stroke-width":2}));
+    g.appendChild(el("line",{x1:-5.5,y1:-8.5,x2:5.5,y2:-8.5,stroke:col,"stroke-width":2,"stroke-linecap":"round"}));
+    g.appendChild(el("circle",{cx:0,cy:-1,r:3.4,fill:col,stroke:dark,"stroke-width":1}));
+    return g;
+  }
+  if(kind==="moto"){
+    g.appendChild(el("rect",{x:-3,y:-13,width:6,height:9,rx:2.5,fill:dark}));
+    g.appendChild(el("rect",{x:-3,y:5,width:6,height:10,rx:2.5,fill:dark}));
+    g.appendChild(el("rect",{x:-4.5,y:-7,width:9,height:14,rx:3,fill:col}));
+    g.appendChild(el("line",{x1:-8,y1:-6.5,x2:8,y2:-6.5,stroke:col,"stroke-width":2.6,"stroke-linecap":"round"}));
+    g.appendChild(el("circle",{cx:0,cy:0.5,r:4,fill:col,stroke:dark,"stroke-width":1.2}));
+    g.appendChild(el("circle",{cx:0,cy:-14,r:1.9,fill:"#FFF7DA"}));
+    return g;
+  }
+  if(kind==="tram"){
+    var i;
+    g.appendChild(el("rect",{x:-11,y:-33,width:22,height:66,rx:4,fill:col}));
+    g.appendChild(el("path",{d:"M-11,-24 L11,-24",stroke:dark,"stroke-width":1.5,opacity:.55}));
+    g.appendChild(el("rect",{x:-8,y:-30,width:16,height:6,rx:1.5,fill:dark,opacity:.5}));   /* лобовое */
+    for(i=0;i<4;i++){                                                                      /* окна по бортам */
+      g.appendChild(el("rect",{x:-10,y:-18+i*12,width:4,height:8,rx:1,fill:dark,opacity:.4}));
+      g.appendChild(el("rect",{x:6,y:-18+i*12,width:4,height:8,rx:1,fill:dark,opacity:.4}));
+    }
+    g.appendChild(el("line",{x1:0,y1:-20,x2:0,y2:20,stroke:COL.line,"stroke-width":1.6,opacity:.45}));  /* штанга */
+    g.appendChild(el("path",{d:"M-6,-6 L0,-12 L6,-6",fill:"none",stroke:COL.line,"stroke-width":1.6,opacity:.6}));
+    g.appendChild(el("path",{d:"M-9,31 L9,31",stroke:dark,"stroke-width":2,opacity:.45}));
+    return g;
+  }
+  g.appendChild(el("rect",{x:-10,y:-18,width:20,height:36,rx:5,fill:col}));
+  g.appendChild(el("rect",{x:-7,y:-12,width:14,height:8,rx:2,fill:dark,opacity:.45}));      /* лобовое */
+  g.appendChild(el("rect",{x:-7,y:5,width:14,height:6,rx:2,fill:dark,opacity:.32}));        /* заднее */
+  g.appendChild(el("rect",{x:-7.5,y:-4,width:15,height:8,rx:2,fill:"#FFFFFF",opacity:.07})); /* крыша */
+  g.appendChild(el("rect",{x:-8.5,y:-18.5,width:4,height:2.5,rx:1,fill:"#FFF7DA",opacity:.85}));
+  g.appendChild(el("rect",{x:4.5,y:-18.5,width:4,height:2.5,rx:1,fill:"#FFF7DA",opacity:.85}));
+  return g;
+}
+function colorOf(kind,you){
+  if(kind==="ped")return COL.ped;
+  if(kind==="bike")return COL.bike;
+  if(kind==="moto")return you?COL.you:COL.moto;
+  if(kind==="tram")return COL.tram;
+  return you?COL.you:COL.other;
+}
 function makeSprite(c){
-  var g=el("g",{});
-  if(c.kind==="ped"){
-    g.appendChild(el("circle",{cx:0,cy:0,r:5.5,fill:COL.ped,stroke:"#1A1C1E","stroke-width":1}));
-    return g;
-  }
-  if(c.kind==="bike"){
-    g.appendChild(el("rect",{x:-4,y:-9,width:8,height:18,rx:3,fill:COL.bike,stroke:"#1A1C1E","stroke-width":1}));
-    return g;
-  }
-  var col=c.you?COL.you:(c.tram?COL.tram:COL.other);
-  var h=c.tram?66:36,w=c.tram?22:20;
-  g.appendChild(el("rect",{x:-w/2,y:-h/2,width:w,height:h,rx:c.tram?3:5,fill:col}));
-  g.appendChild(el("rect",{x:-w/2+3,y:-h/2+5,width:w-6,height:c.tram?8:9,rx:2,fill:"#1A1C1E",opacity:.42}));
-  if(c.you)g.appendChild(el("circle",{cx:0,cy:-h/2-9,r:3,fill:COL.line,opacity:.75}));
+  var kind=kindOf(c),g=drawSprite(el("g",{}),kind,colorOf(kind,c.you));
+  /* машину ученика помечаем меткой впереди — иначе в потоке одинаковых силуэтов
+     синий кузов теряется на маленьком экране */
+  if(c.you)g.appendChild(el("circle",{cx:0,cy:kind==="tram"?-42:-25,r:3,fill:COL.line,opacity:.75}));
   return g;
 }
 
 /* ── engine state ── */
-var cars=[],raf=null,mode="hold",spec=null;
+var cars=[],raf=null,mode="hold",spec=null,crashInfo=null;
 var reduced=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+var HIT=26;          /* ближе этого два кузова уже соприкасаются */
+var SAMPLE=4;        /* шаг оцифровки траектории, px */
+var MIN_S=20;        /* конфликты в первых 20px пути игнорируем: там участники просто
+                        стартуют рядом в соседних полосах, а не сталкиваются */
+
+function samplePath(p,L){
+  var pts=[],s;
+  for(s=0;s<=L;s+=SAMPLE){var q=p.getPointAtLength(s);pts.push({s:s,x:q.x,y:q.y});}
+  var e=p.getPointAtLength(L);pts.push({s:L,x:e.x,y:e.y});
+  return pts;
+}
+function heading(k,s){
+  var a=k.path.getPointAtLength(Math.max(0,s-4)),b=k.path.getPointAtLength(Math.min(k.len,s+4));
+  var dx=b.x-a.x,dy=b.y-a.y,m=Math.hypot(dx,dy)||1;
+  return {x:dx/m,y:dy/m};
+}
+/* Первая точка на пути «нарушителя», где его накрывает траектория соперника;
+   если пересечения нет — самая тесная точка, чтобы отличить «разминулись
+   в метре» от «разъехались по разным улицам». */
+function firstConflict(me,other){
+  var x,y,best=null,hit=null;
+  for(x=0;x<me.pts.length&&!hit;x++){
+    if(me.pts[x].s<MIN_S)continue;
+    for(y=0;y<other.pts.length;y++){
+      var d=Math.hypot(me.pts[x].x-other.pts[y].x,me.pts[x].y-other.pts[y].y);
+      if(!best||d<best.d)best={sa:me.pts[x].s,sb:other.pts[y].s,d:d};
+      if(d<HIT&&!hit){hit={sa:me.pts[x].s,sb:other.pts[y].s,d:d};break;}
+    }
+  }
+  return hit||best;
+}
+/* Кого разбираем: машину ученика, а в вопросах от третьего лица — того,
+   кто по схеме обязан уступать (у него самая поздняя очередь). */
+function offender(){
+  var me=null,i;
+  for(i=0;i<cars.length;i++)if(cars[i].you)return cars[i];
+  for(i=0;i<cars.length;i++)if(!me||cars[i].order>me.order)me=cars[i];
+  return me;
+}
+function whoText(k){return KIND_RU[k.kind]||"автомобиль";}
+function crashSentence(me,info){
+  var lead=me.you?"Поедешь — ":"Поедет вторым — ";
+  var who=whoText(info.other),acc=KIND_ACC[info.other.kind]||"машину";
+  var tail=info.other.kind==="ped"||info.other.kind==="bike"
+    ? who+" переходит первым."
+    : who+" проезжает первым — его надо пропустить.";
+  if(info.kind==="block"){
+    if(info.blow==="head")
+      return lead+"съедетесь лоб в лоб: разъехаться негде, "+tail;
+    if(info.blow==="rear-in"||info.blow==="rear-by")
+      return lead+who+" окажется вплотную перед тобой: "+tail;
+    return lead+who+" пройдёт впритирку: "+tail;
+  }
+  if(info.blow==="ped")   return lead+"наезд на "+acc+" на переходе: "+tail;
+  if(info.blow==="head")  return lead+"лобовой удар: "+tail;
+  if(info.blow==="rear-in")return lead+"въезд в "+acc+" сзади: "+tail;
+  if(info.blow==="rear-by")return lead+"удар сзади: "+tail;
+  return lead+"удар в "+info.side+" бок: "+tail;
+}
+/* Считается один раз на сцену: где именно пересекутся траектории, каким боком
+   и с кем. Отсюда же берутся скорости для показа — иначе удар получался
+   случайно, только когда участники сами оказывались рядом. */
+function analyze(){
+  if(crashInfo)return crashInfo;
+  var me=offender();
+  if(!me||cars.length<2)
+    return (crashInfo={kind:"single",me:me,text:"В кадре ты один — сталкиваться не с кем."});
+
+  var rivals=cars.filter(function(o){return o!==me&&o.order<me.order;});
+  if(!rivals.length)
+    return (crashInfo={kind:"clear",me:me,
+      text:(me.you?"Ты":"Эта машина")+" и так проезжает первым — здесь ехать можно, уступать некому."});
+
+  /* Сначала настоящее пересечение — берём самое раннее по нашему пути;
+     если ни с кем не пересеклись, работаем с самым тесным разъездом. */
+  var best=null;
+  rivals.forEach(function(o){
+    var c=firstConflict(me,o);
+    if(!c)return;
+    var cand={sa:c.sa,sb:c.sb,d:c.d,other:o};
+    if(!best)best=cand;
+    else if(best.d<HIT&&c.d<HIT){if(c.sa<best.sa)best=cand;}
+    else if(c.d<best.d)best=cand;
+  });
+  if(!best){
+    var first=rivals[0];
+    rivals.forEach(function(o){if(o.order<first.order)first=o;});
+    return (crashInfo={kind:"nohit",me:me,other:first,
+      text:"Пути на схеме не пересекаются, но ехать нельзя: "+
+           whoText(first)+" проезжает первым, ты создаёшь ему помеху."});
+  }
+
+  var pa=me.path.getPointAtLength(best.sa);
+  var pre=best.other.path.getPointAtLength(Math.max(0,best.sb-14));
+  var ha=heading(me,best.sa),hb=heading(best.other,best.sb);
+  var dot=ha.x*hb.x+ha.y*hb.y;
+  var rel={x:pre.x-pa.x,y:pre.y-pa.y};
+  var right={x:-ha.y,y:ha.x};                       /* правая рука водителя: экранный Y вниз */
+  var ahead=(rel.x*ha.x+rel.y*ha.y)<0;              /* соперник пришёл спереди */
+  best.me=me;
+  best.side=(rel.x*right.x+rel.y*right.y)>0?"правый":"левый";
+  best.blow=(best.other.kind==="ped"||best.other.kind==="bike")?"ped"
+           :dot>0.7?(ahead?"rear-in":"rear-by")
+           :dot<-0.7?"head":"side";
+  /* Схема рисует полосы шире, чем они есть: встречный разъезд в сужении
+     и «протискивание» мимо соседа кузова не касаются, но ехать там нельзя
+     ровно так же. Разводим их в отдельный вердикт, а не в «столкновения нет». */
+  var near=best.blow==="head"?75:45;
+  best.kind=best.d<HIT?"hit":(best.d<near?"block":null);
+  if(!best.kind)
+    return (crashInfo={kind:"nohit",me:me,other:best.other,
+      text:"Пути на схеме не пересекаются, но ехать нельзя: "+
+           whoText(best.other)+" проезжает первым, ты создаёшь ему помеху."});
+  best.text=crashSentence(me,best);
+  return (crashInfo=best);
+}
 
 function clear(){
   cancelAnimationFrame(raf);raf=null;
@@ -511,18 +686,21 @@ function build(sc){
     }
     if(c.pedArm){exit=L*0.88;}
     if(inside&&exit===L)exit=L;
+    var kind=kindOf(c);
     var sprite=makeSprite(c); svg.appendChild(sprite);
-    return {path:p,len:L,hold:hold,exit:exit,order:c.order||1,you:!!c.you,kind:c.kind,
-            sprite:sprite,s:0,rel:false,speed:c.kind==="ped"?26:(c.kind==="bike"?44:(c.speed||(c.tram?70:82))),
+    var base=kind==="ped"?26:(kind==="bike"?44:(c.speed||(kind==="tram"?70:(kind==="moto"?86:82))));
+    return {path:p,len:L,hold:hold,exit:exit,order:c.order||1,you:!!c.you,kind:kind,
+            sprite:sprite,s:0,rel:false,speed:base,v:base,pts:samplePath(p,L),
             done:false,startOnRing:!!c.onRing};
   });
+  crashInfo=null;
   reset();
 }
 function place(k){
   var pt=k.path.getPointAtLength(Math.min(k.s,k.len));
   var pt2=k.path.getPointAtLength(Math.min(k.s+2,k.len));
   var a=Math.atan2(pt2.y-pt.y,pt2.x-pt.x)*180/Math.PI+90;
-  k.sprite.setAttribute("transform","translate("+pt.x.toFixed(1)+","+pt.y.toFixed(1)+") rotate("+(k.kind==="ped"?0:a.toFixed(1))+")");
+  k.sprite.setAttribute("transform","translate("+pt.x.toFixed(1)+","+pt.y.toFixed(1)+") rotate("+a.toFixed(1)+")");
   k.sprite.setAttribute("opacity",k.s>=k.len-1?0:1);
 }
 function reset(){
@@ -532,9 +710,26 @@ function reset(){
     place(k);});
   var f=svg.querySelector(".flash"); if(f)f.remove();
 }
+function boom(x,y){
+  var fl=el("circle",{cx:x,cy:y,r:4,fill:"none",stroke:COL.red,"stroke-width":4});
+  fl.setAttribute("class","flash");
+  fl.appendChild(el("animate",{attributeName:"r",values:"6;46",dur:"0.7s",repeatCount:"indefinite"}));
+  fl.appendChild(el("animate",{attributeName:"opacity",values:"1;0",dur:"0.7s",repeatCount:"indefinite"}));
+  svg.appendChild(fl);
+}
 function play(collide){
   if(!cars.length)return;
   reset(); mode=collide?"crash":"hold";
+  var info=collide?analyze():null;
+  if(info&&info.kind!=="hit"&&info.kind!=="block")info=null;
+  cars.forEach(function(k){k.v=k.speed;});
+  if(info){
+    /* Разгоняем участников так, чтобы к точке пересечения они пришли
+       одновременно: удар обязан случиться, а не «если повезёт со скоростями».
+       Время берём по самому медленному — никто не едет быстрее своей нормы. */
+    var T=Math.max(info.sa/info.me.speed,info.sb/info.other.speed);
+    if(T>0.1){info.me.v=info.sa/T;info.other.v=info.sb/T;}
+  }
   var last=performance.now(),stopped=false;
   function frame(t){
     var dt=Math.min((t-last)/1000,.05); last=t;
@@ -550,27 +745,21 @@ function play(collide){
         }
         if(free)k.rel=true; else {k.s=k.hold;continue;}
       }
-      k.s+=k.speed*dt;
+      k.s+=k.v*dt;
       if(k.s>k.len){k.s=k.len;k.done=true;}
       place(k);
     }
-    if(mode==="crash"){
-      for(i=0;i<cars.length&&!stopped;i++)for(j=i+1;j<cars.length;j++){
-        var a=cars[i].path.getPointAtLength(Math.min(cars[i].s,cars[i].len));
-        var b=cars[j].path.getPointAtLength(Math.min(cars[j].s,cars[j].len));
-        if(Math.hypot(a.x-b.x,a.y-b.y)<26&&cars[i].s<cars[i].len&&cars[j].s<cars[j].len){
-          stopped=true;
-          var fl=el("circle",{cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,r:4,fill:"none",stroke:COL.red,"stroke-width":4});
-          fl.setAttribute("class","flash");
-          fl.appendChild(el("animate",{attributeName:"r",values:"6;46",dur:"0.7s",repeatCount:"indefinite"}));
-          fl.appendChild(el("animate",{attributeName:"opacity",values:"1;0",dur:"0.7s",repeatCount:"indefinite"}));
-          svg.appendChild(fl);
-          break;
-        }
-      }
-      if(stopped)return;
+    if(info&&!stopped&&info.me.s>=info.sa-4&&info.other.s>=info.sb-4){
+      var a=info.me.path.getPointAtLength(Math.min(info.sa,info.me.len));
+      var b=info.other.path.getPointAtLength(Math.min(info.sb,info.other.len));
+      stopped=true;boom((a.x+b.x)/2,(a.y+b.y)/2);
+      return;
     }
     if(cars.every(function(x){return x.done;})){
+      if(info&&!stopped){                          /* страховка: удар посчитан, но кадры проскочили */
+        var p=info.me.path.getPointAtLength(info.sa);
+        boom(p.x,p.y);return;
+      }
       if(!reduced)setTimeout(function(){if(mode!=="crash")play(false);},900);
       return;
     }
@@ -582,8 +771,22 @@ function stop(){cancelAnimationFrame(raf);raf=null;}
 /* для тестов: доступ к рассчитанным траекториям */
 function getCars(){return cars.map(function(k){return {len:k.len,hold:k.hold,exit:k.exit,order:k.order,speed:k.speed,kind:k.kind,you:k.you,
   at:function(s){return k.path.getPointAtLength(Math.min(s,k.len));}};});}
-return {build:build,play:play,stop:stop,reset:reset,getCars:getCars};
+/* Легенду собираем теми же спрайтами, что едут по схеме: иначе подпись
+   и картинка разъедутся при первой же правке рисования. */
+var ICON_SCALE={car:.62,tram:.40,moto:.82,bike:.92,ped:1.5};
+function icon(kind,you){
+  /* кадр выше, чем шире: иначе трамвай в 66 единиц длиной обрезается */
+  var s=el("svg",{viewBox:"-12 -14 24 28",width:16,height:19,"aria-hidden":"true"});
+  var g=el("g",{transform:"scale("+(ICON_SCALE[kind]||.62)+")"});
+  drawSprite(g,kind,colorOf(kind,you));
+  s.appendChild(g);
+  return s;
 }
+return {build:build,play:play,stop:stop,reset:reset,getCars:getCars,getCrash:analyze,icon:icon};
+}
+/* Легенда нужна до того, как появится первая схема, — движку для иконок
+   ничего, кроме document, не требуется. */
+SceneEngine.icon=function(kind,you){return SceneEngine(null).icon(kind,you);};
 
 </script>
 <script>
@@ -760,6 +963,7 @@ function show(i){
   });
   document.getElementById("reveal").hidden=true;
   document.getElementById("crash").disabled=true;
+  crashSay("");
   drawRail(sc.rung);
   engine.build(sceneOf(sc));
   if(!reduced)engine.play(false);
@@ -781,12 +985,28 @@ function pick(k){
   var r=document.getElementById("refs");r.innerHTML="";
   sc.refs.forEach(function(x){var s=document.createElement("span");s.className="ref";s.textContent="п. "+x;r.appendChild(s);});
   document.getElementById("reveal").hidden=false;
-  document.getElementById("crash").disabled=false;
+  document.getElementById("crash").disabled=engine.getCrash().kind==="single";
   document.getElementById("prog").textContent="решено "+answered.filter(Boolean).length+" / "+S.length;
   engine.play(false);
 }
-document.getElementById("play").onclick=function(){engine.play(false);};
-document.getElementById("crash").onclick=function(){engine.play(true);};
+function crashSay(text){
+  var v=document.getElementById("crashSay");
+  v.textContent=text||"";v.hidden=!text;
+}
+document.getElementById("play").onclick=function(){crashSay("");engine.play(false);};
+document.getElementById("crash").onclick=function(){
+  engine.play(true);crashSay(engine.getCrash().text);
+};
+(function(){
+  var box=document.getElementById("legend");
+  [["car",1,"ты"],["car",0,"другие"],["tram",0,"трамвай"],
+   ["moto",0,"мотоцикл"],["bike",0,"велосипед"],["ped",0,"пешеход"]].forEach(function(it){
+    var s=document.createElement("span");
+    s.appendChild(SceneEngine.icon(it[0],it[1]));
+    s.appendChild(document.createTextNode(it[2]));
+    box.appendChild(s);
+  });
+})();
 document.getElementById("prev").onclick=function(){show((cur-1+S.length)%S.length);};
 document.getElementById("next").onclick=function(){show((cur+1)%S.length);};
 document.addEventListener("keydown",function(e){
