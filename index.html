@@ -1595,7 +1595,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v75";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v76";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2714,15 +2714,16 @@ function initProgressIO() {
    если сервер почему-то отдаёт разное. */
 function checkFreshness(go) {
   if (APP_VERSION === "dev") return;                 /* монолит, версии нет */
-  /* Метку ставим по ТЕКУЩЕЙ версии: «находясь на ней, перезагрузку уже пробовали».
-     Иначе, если сервер почему-то продолжает отдавать другое, страница зациклится. */
-  if (sessionStorage.getItem("pdd-reloaded") === APP_VERSION) return;
   fetch("index.html", { cache: "no-cache" })
     .then(function (r) { return r.text(); })
     .then(function (html) {
       var m = html.match(/var APP_VERSION="(pdd-v\d+)"/);
       if (!m || m[1] === APP_VERSION) return;
-      sessionStorage.setItem("pdd-reloaded", APP_VERSION);
+      /* Метка — по ЦЕЛЕВОЙ версии: «дойти до неё уже пробовали». К той же версии
+         второй раз не пойдём (цикла не будет), а новый деплой попытку разрешит.
+         Метка по текущей версии блокировала бы попытки до конца сессии. */
+      if (sessionStorage.getItem("pdd-reloaded") === m[1]) return;
+      sessionStorage.setItem("pdd-reloaded", m[1]);
       /* location.reload() браузер тоже берёт из HTTP-кэша и возвращает ту же
          версию — проверено живьём. Уходим на адрес с меткой версии: другой URL
          кэш обойти не может, а GitHub Pages лишний параметр игнорирует. */
