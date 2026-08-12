@@ -1595,7 +1595,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v74";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v75";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2712,7 +2712,7 @@ function initProgressIO() {
    Поэтому после загрузки запрашиваем страницу с проверкой ETag и, если версия
    разошлась, перезагружаемся один раз. Флаг в sessionStorage не даёт зациклиться,
    если сервер почему-то отдаёт разное. */
-function checkFreshness(reload) {
+function checkFreshness(go) {
   if (APP_VERSION === "dev") return;                 /* монолит, версии нет */
   /* Метку ставим по ТЕКУЩЕЙ версии: «находясь на ней, перезагрузку уже пробовали».
      Иначе, если сервер почему-то продолжает отдавать другое, страница зациклится. */
@@ -2723,7 +2723,11 @@ function checkFreshness(reload) {
       var m = html.match(/var APP_VERSION="(pdd-v\d+)"/);
       if (!m || m[1] === APP_VERSION) return;
       sessionStorage.setItem("pdd-reloaded", APP_VERSION);
-      (reload || location.reload.bind(location))();
+      /* location.reload() браузер тоже берёт из HTTP-кэша и возвращает ту же
+         версию — проверено живьём. Уходим на адрес с меткой версии: другой URL
+         кэш обойти не может, а GitHub Pages лишний параметр игнорирует. */
+      var url = location.pathname + "?v=" + encodeURIComponent(m[1]) + location.hash;
+      (go || function (u) { location.replace(u); })(url);
     })
     .catch(function () {});
 }
