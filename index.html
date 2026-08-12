@@ -296,6 +296,10 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 .lede{max-width:60ch;color:var(--ink-2);margin-bottom:24px}
 .tr-link-accent{margin:0;background:var(--yellow);color:var(--ink)}
 .ref-search-row{margin-bottom:18px;max-width:480px}
+.ref-empty{margin:12px 0 0;font-size:14px;color:var(--muted)}
+.ref-empty[hidden]{display:none}
+.ref-clear{font-family:inherit;font-size:13px;background:var(--ink);color:var(--concrete);border:none;padding:6px 12px;border-radius:var(--r-sm);cursor:pointer}
+.ref-clear:hover{background:var(--asphalt-2)}
 .ai-head-text{min-width:0}
 .ai-title{font-family:"Oswald","Golos Text",sans-serif;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
 .pen-ask{display:inline-block}
@@ -442,7 +446,8 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
     <button class="mode" data-r="pen">Штрафы</button>
   </nav>
   <div class="ai-row ref-search-row">
-    <input class="ai-inp ref-search" id="refSearch" type="search" placeholder="Поиск: номер, название, текст…">
+    <input class="ai-inp ref-search" id="refSearch" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Поиск: номер, название, текст…">
+    <p class="ref-empty" id="refEmpty" hidden></p>
   </div>
   <div id="refList"></div>
 
@@ -2160,9 +2165,11 @@ function drawRef() {
 
 function refFilter() {
   var q = ($("refSearch").value || "").toLowerCase().trim();
-  var refList = $("refList");
+  var refList = $("refList"), shown = 0;
   $$(".ref-card,.pen-row", refList).forEach(function (c) {
-    c.style.display = (!q || c.dataset.search.indexOf(q) >= 0) ? "" : "none";
+    var hit = !q || c.dataset.search.indexOf(q) >= 0;
+    c.style.display = hit ? "" : "none";
+    if (hit) shown++;
   });
   /* заголовок категории прячем, если в ней ничего не осталось */
   $$(".ref-cat", refList).forEach(function (h) {
@@ -2173,6 +2180,22 @@ function refFilter() {
     h.style.display = any ? "" : "none";
     if (g) g.style.display = any ? "" : "none";
   });
+
+  /* Пустой экран без объяснения выглядит поломкой: браузер умеет сам подставить
+     в поиск старое значение, и человек не понимает, куда делся справочник. */
+  var empty = $("refEmpty");
+  if (shown === 0 && q) {
+    empty.innerHTML = "";
+    empty.appendChild(document.createTextNode("Ничего не найдено по запросу «" + q + "». "));
+    var btn = document.createElement("button");
+    btn.className = "ref-clear";
+    btn.textContent = "Очистить поиск";
+    btn.onclick = function () { $("refSearch").value = ""; refFilter(); $("refSearch").focus(); };
+    empty.appendChild(btn);
+    empty.hidden = false;
+  } else {
+    empty.hidden = true;
+  }
 }
 
 function initRefbook() {
