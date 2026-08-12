@@ -296,6 +296,7 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 .lede{max-width:60ch;color:var(--ink-2);margin-bottom:24px}
 .tr-link-accent{margin:0;background:var(--yellow);color:var(--ink)}
 .ref-search-row{margin-bottom:18px;max-width:480px}
+.ref-version{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);white-space:nowrap}
 .ref-empty{margin:12px 0 0;font-size:14px;color:var(--muted)}
 .ref-empty[hidden]{display:none}
 .ref-clear{font-family:inherit;font-size:13px;background:var(--ink);color:var(--concrete);border:none;padding:6px 12px;border-radius:var(--r-sm);cursor:pointer}
@@ -456,7 +457,7 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 </main>
 
 <footer class="wrap">
-  Вопросы и изображения — официальные экзаменационные билеты ГИБДД категории A/B (открытый репозиторий etspring/pdd_russia). Билеты периодически обновляются — сверяй с действующей редакцией.
+  Вопросы и изображения — официальные экзаменационные билеты ГИБДД категории A/B (открытый репозиторий etspring/pdd_russia). Билеты периодически обновляются — сверяй с действующей редакцией. <span class="ref-version" id="refVersion"></span>
 </footer>
 
 </div>
@@ -1580,6 +1581,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
+var APP_VERSION="pdd-v59";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2198,7 +2200,13 @@ function refFilter() {
   }
 }
 
+function showVersion() {
+  var el = $("refVersion");
+  if (el) el.textContent = "версия " + APP_VERSION;
+}
+
 function initRefbook() {
+  showVersion();
   Array.prototype.forEach.call($("refTabs").children, function (b) {
     b.onclick = function () { refMode = b.dataset.r; drawRef(); };
   });
