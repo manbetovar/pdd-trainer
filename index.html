@@ -183,7 +183,15 @@ a{color:inherit}
    от вопроса к вопросу (текст и варианты бывают любой длины) и ещё на 89 после
    ответа, когда появляются вердикт с подсказкой. Теперь содержимое скроллится
    внутри карточки, а кнопки всегда на одном месте. */
-.q-actions{margin-top:auto;position:sticky;bottom:0;padding:12px 0 0;background:var(--asphalt)}
+/* Шапка карточки: слева счётчик, справа навигация. Когда в узкой колонке они
+   не помещаются в строку, навигация переносится ниже и остаётся прижатой вправо. */
+.q-head{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;margin-bottom:10px}
+.q-head .q-count{margin:0}
+.q-nav-head{margin:0 0 0 auto;gap:6px}
+.q-nav-head .q-btn{padding:5px 10px;font-size:11px}
+.q-actions{margin-top:auto;position:sticky;bottom:0;padding:12px 0 0;background:var(--asphalt);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.q-actions .ai{margin:0}
 @media(max-width:760px){
   /* на телефоне страница скроллится целиком, фиксированная высота только мешает */
   .q-side{height:auto;overflow:visible}
@@ -435,7 +443,14 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
       </div>
     </div>
     <div class="q-side">
-      <p class="q-count" id="qCount"></p>
+      <div class="q-head">
+        <p class="q-count" id="qCount"></p>
+        <div class="q-nav q-nav-head">
+          <button class="q-btn" id="prev">← Пред</button>
+          <button class="q-btn" id="next">След →</button>
+          <button class="q-btn" id="nextUn">К нерешённому</button>
+        </div>
+      </div>
       <p class="q-text" id="qText"></p>
       <div class="q-opts" id="qOpts"></div>
       <div class="q-explain" id="qExplain">
@@ -448,12 +463,7 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
         <div class="ai" id="aiBox">
           <button class="ai-toggle" id="aiToggle">Обсудить с ИИ</button>
         </div>
-        <div class="q-nav">
-          <button class="q-btn" id="prev">← Пред</button>
-          <button class="q-btn" id="next">След →</button>
-          <button class="q-btn" id="nextUn">К нерешённому</button>
-          <span class="q-score" id="qScore"></span>
-        </div>
+        <span class="q-score" id="qScore"></span>
       </div>
     </div>
   </div>
@@ -1622,7 +1632,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v82";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v84";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2052,7 +2062,9 @@ function render() {
     : '<div class="noimg">вопрос без картинки</div>';
   mediaFor(qid, hasImg);
 
-  $("qCount").textContent = g.title + " · вопрос " + (cur.i + 1) + " / " + g.ids.length +
+  /* Название группы не повторяем: оно и так стоит в выпадашке над карточкой,
+     а в узкой колонке съедало всю строку и ломало шапку на две. */
+  $("qCount").textContent = "вопрос " + (cur.i + 1) + " / " + g.ids.length +
     (cur.m === 0
       ? (TPOS[qid] ? " · " + TPOS[qid] : " · вне билетов")
       : (QTOPIC[qid] ? " · тема: " + QTOPIC[qid] : ""));
