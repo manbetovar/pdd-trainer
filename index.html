@@ -1595,7 +1595,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v73";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v74";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2691,7 +2691,14 @@ function initProgressIO() {
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
       .then(function (reg) { reg.update(); })
       .catch(function () {});
+    /* Сверку зовём трижды: на старте запрос иногда падает молча — он гонится
+       с активацией worker'а. Повтор через две секунды и по смене контроллера
+       ловят этот случай. Метка по версии не даёт лишних перезагрузок. */
     checkFreshness();
+    setTimeout(checkFreshness, 2000);
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      checkFreshness();
+    });
   }
 })();
 
