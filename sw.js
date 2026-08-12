@@ -1,5 +1,5 @@
 /* ПДД-тренажёр: офлайн-кэш. Всё зашито в два html — кэшируем целиком. */
-var CACHE = "pdd-v65";
+var CACHE = "pdd-v67";
 var ASSETS = [
   "./",
   "./index.html",
@@ -67,6 +67,9 @@ self.addEventListener("fetch", function (e) {
   var url = new URL(e.request.url);
   /* API-запросы чата — только сеть */
   if (url.origin !== location.origin) return;
+  /* Сам worker кэшировать нельзя: попав в кэш, он отдавал бы свою старую копию
+     всем, кто запрашивает sw.js со страницы, и версия «застревала». */
+  if (url.pathname.endsWith("/sw.js")) return;
   var isPage = e.request.mode === "navigate" ||
                /\.html$/.test(url.pathname) ||
                url.pathname.endsWith("/");

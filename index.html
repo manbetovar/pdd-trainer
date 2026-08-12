@@ -1595,7 +1595,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v65";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v67";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2685,7 +2685,12 @@ function initProgressIO() {
 
   /* офлайн-кэш; на file:// service worker недоступен — это норма */
   if ("serviceWorker" in navigator && location.protocol === "https:") {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    /* updateViaCache:"none" — GitHub Pages отдаёт sw.js с max-age=600, и без
+       этого браузер до десяти минут не замечает новую версию worker'а. Плюс
+       явный update() на каждом запуске: проверка стоит один запрос с ETag. */
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+      .then(function (reg) { reg.update(); })
+      .catch(function () {});
   }
 })();
 </script>
