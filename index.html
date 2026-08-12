@@ -121,6 +121,7 @@ a{color:inherit}
 /* Тема с подтемами и сами подтемы занимают всю строку: в две колонки
    вложенность рассыпается — подтема встаёт рядом с чужой темой. */
 /* Подборки — не тема банка, а срез поверх него: отделяем цветом и полосой */
+.chip-empty{opacity:.4;cursor:default}
 .chip-star{grid-column:1/-1;background:var(--asphalt);color:var(--line);border-color:var(--asphalt)}
 .chip-star .n{color:var(--yellow)}
 .chip-star:hover{border-color:var(--yellow)}
@@ -1134,6 +1135,14 @@ function answerState(qbank, progress, qid) {
   return !!(a && a.ok);
 }
 
+/* Вопросы, на которых ученик ошибся — в порядке банка. Своя подборка ценнее
+   любой чужой: это ровно то, что не выучено. */
+function mistakeIds(qbank, progress, order) {
+  return (order || Object.keys(qbank)).filter(function (id) {
+    return answerState(qbank, progress, id) === false;
+  });
+}
+
 function groupStats(qbank, progress, ids) {
   var ok = 0, bad = 0;
   ids.forEach(function (id) {
@@ -1515,6 +1524,7 @@ function persistProgress() { saveProgress(progress); }
 
 /* обратные карты: вопрос → позиция в билете и тема */
 var TPOS = {}, QTOPIC = {};
+var ALL_IDS = [];      /* весь банк в порядке билетов — база для «моих ошибок» */
 
 function buildIndexes() {
   TICKETS.forEach(function (t, ti) {
@@ -1525,6 +1535,11 @@ function buildIndexes() {
   TOPICS.forEach(function (t) {
     t.ids.forEach(function (id) { if (!QTOPIC[id]) QTOPIC[id] = t.title; });
   });
+  var seen = {};
+  TICKETS.forEach(function (t) {
+    t.ids.forEach(function (id) { if (!seen[id]) { seen[id] = 1; ALL_IDS.push(id); } });
+  });
+  for (var id in QBANK) if (!seen[id]) ALL_IDS.push(id);
 }
 
 /* тонкие обёртки над чистыми функциями stats.js — чтобы не таскать
@@ -1567,9 +1582,19 @@ function bootView() {
 /* Плоский список для выбора: тема, следом её подтемы. Индекс в этом списке —
    это cur.g, поэтому подтема выбирается как обычная группа, и вся статистика,
    прогресс и клавиатура работают без единой правки. */
+/* Список «моих ошибок» пересобирается не на каждый ответ, а только когда его
+   выбирают заново: иначе верный ответ на месте выкидывал бы вопрос из группы
+   прямо под курсором и сбивал нумерацию. */
+var mistakesFrozen = null;
+
+function refreshMistakes() { mistakesFrozen = null; }
+
 function flattenTopics(topics) {
   var out = [];
-  /* Подборки Дрома идут первыми — это то, с чего есть смысл начинать
+  var mine = mistakesFrozen || mistakeIds(QBANK, progress, ALL_IDS);
+  out.push({ title: "Мои ошибки", ids: mine, num: "✗", curated: true, mistakes: true,
+             hint: "вопросы, на которых ты ошибся" });
+  /* Подборки Дрома идут следом — это то, с чего есть смысл начинать
      повторение: чаще всего ошибаются и дольше всего думают. */
   if (typeof CURATED !== "undefined") {
     CURATED.forEach(function (g, i) {
@@ -1586,10 +1611,14 @@ function flattenTopics(topics) {
   return out;
 }
 
+/* Пересобрать список групп: у «моих ошибок» состав зависит от прогресса.
+   Позиции групп фиксированы, поэтому cur.g остаётся валидным. */
+function rebuildGroups() { MODES[0] = flattenTopics(TOPICS); }
+
 function initApp() {
-  MODES = [flattenTopics(TOPICS), TICKETS];
-  progress = loadProgress();
+  progress = loadProgress();     /* «мои ошибки» считаются из прогресса — он нужен раньше групп */
   buildIndexes();
+  MODES = [flattenTopics(TOPICS), TICKETS];
   initRouter();
 }
 
@@ -1714,6 +1743,7 @@ function groupCountLabel(st, total) {
 
 function drawGroups() {
   var modesEl = $("modes"), groupsEl = $("groups");
+  rebuildGroups();          /* состав «моих ошибок» мог измениться с прошлого открытия */
   Array.prototype.forEach.call(modesEl.children, function (b) {
     b.setAttribute("aria-current", +b.dataset.m === cur.m ? "true" : "false");
   });
@@ -1727,6 +1757,7 @@ function drawGroups() {
     b.dataset.g = i;
     var st = groupStat(g);
     if (st.left === 0 && g.ids.length) b.classList.add("done");
+    if (!g.ids.length) { b.classList.add("chip-empty"); b.disabled = true; }
     b.innerHTML = '<span class="c-t"></span><span class="n"></span>';
     /* Темы нумеруем: порядок здесь смысловой, и номер помогает держаться курса */
     b.querySelector(".c-t").textContent = cur.m === 1
@@ -1736,6 +1767,10 @@ function drawGroups() {
     b.title = g.hint ? g.title + " — " + g.hint : g.title;
     b.setAttribute("aria-current", i === cur.g ? "true" : "false");
     b.onclick = function () {
+      /* Снимок «моих ошибок» берём в момент выбора и держим, пока группа открыта:
+         иначе исправленный вопрос исчезал бы прямо под курсором. */
+      mistakesFrozen = g.mistakes ? mistakeIds(QBANK, progress, ALL_IDS) : null;
+      rebuildGroups();
       cur.g = i; cur.i = 0;
       jumpFirstUnanswered(); closeGroups(); render();
     };
@@ -1747,6 +1782,13 @@ function drawGroups() {
 }
 
 function jumpFirstUnanswered() { cur.i = firstUnansweredIndex(progress, currentGroup().ids); }
+
+/* «Мои ошибки» пусты, пока ученик не ошибся, — на пустой группе рендерить нечего */
+function firstNonEmptyGroup() {
+  var list = MODES[cur.m];
+  for (var i = 0; i < list.length; i++) if (list[i].ids.length) return i;
+  return 0;
+}
 
 /* ── отрисовка вопроса ────────────────────────────────────────── */
 
@@ -1829,7 +1871,9 @@ function renderStats(g) {
 }
 
 function render() {
+  if (!currentGroup() || !currentGroup().ids.length) { cur.g = firstNonEmptyGroup(); cur.i = 0; }
   var g = currentGroup(), qid = g.ids[cur.i], q = QBANK[qid];
+  if (!q) { cur.i = 0; qid = g.ids[0]; q = QBANK[qid]; }
 
   $$(".chip", $("groups")).forEach(function (b) {
     b.setAttribute("aria-current", +b.dataset.g === cur.g ? "true" : "false");
@@ -1881,7 +1925,8 @@ function stepQuestion(delta) {
 function initQuiz() {
   Array.prototype.forEach.call($("modes").children, function (b) {
     b.onclick = function () {
-      cur.m = +b.dataset.m; cur.g = 0; cur.i = 0;
+      cur.m = +b.dataset.m; cur.i = 0;
+      rebuildGroups(); cur.g = firstNonEmptyGroup();
       drawGroups(); jumpFirstUnanswered(); render();
     };
   });
@@ -1915,7 +1960,7 @@ function initQuiz() {
     clearTimeout(resetArmed); resetArmed = null;
     b.textContent = "Сбросить группу";
     currentGroup().ids.forEach(function (id) { delete progress[id]; });
-    persistProgress(); cur.i = 0; drawGroups(); render();
+    persistProgress(); refreshMistakes(); cur.i = 0; drawGroups(); render();
   };
 
   document.addEventListener("keydown", function (e) {
@@ -2379,6 +2424,7 @@ function applyProgressBackup(text) {
     progress[k] = res.answers[k];
   }
   persistProgress();
+  refreshMistakes();     /* импорт мог принести чужие ошибки — состав группы пересчитать */
   drawGroups();
   render();
   showBackupNote("Восстановлено " + res.count + " ответов, новых — " + added);
