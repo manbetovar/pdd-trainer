@@ -165,11 +165,11 @@ a{color:inherit}
 .sv-note{font-size:12.5px;line-height:1.5;color:#9AA1A6;margin:8px 0 0}
 .q-img img{width:100%;border-radius:var(--r-sm);display:block;background:#111}
 .noimg{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;color:var(--steel-3);font-size:13px;border:1px dashed rgba(240,238,231,.2);border-radius:var(--r-sm)}
-/* Кнопки не должны прыгать от вопроса к вопросу: текст и разбор бывают любой
-   длины, поэтому действия прижаты к низу карточки, а сам разбор при переполнении
-   скроллится внутри себя, а не растягивает колонку. */
+/* Потолок высоты, а не фиксированная высота: длинный разбор скроллится внутри
+   колонки и не растягивает карточку, а короткий вопрос не оставляет под собой
+   пустоту в полэкрана. */
 .q-side{color:var(--line);min-width:0;display:flex;flex-direction:column;
-  height:clamp(480px,64vh,640px);overflow:auto}
+  max-height:clamp(420px,64vh,640px);overflow:auto}
 .q-explain{flex:0 0 auto}
 /* Разбор обрезается по высоте карточки — без видимой полосы человек не поймёт,
    что текст продолжается. */
@@ -179,22 +179,19 @@ a{color:inherit}
 .q-side::-webkit-scrollbar-track{background:transparent}
 .q-side{scrollbar-width:thin;scrollbar-color:rgba(240,238,231,.22) transparent}
 .q-explain:empty{display:none}
-/* Блок действий пришпилен к низу карточки: иначе он ездил на полсотни пикселей
-   от вопроса к вопросу (текст и варианты бывают любой длины) и ещё на 89 после
-   ответа, когда появляются вердикт с подсказкой. Теперь содержимое скроллится
-   внутри карточки, а кнопки всегда на одном месте. */
-/* Шапка карточки: слева счётчик, справа навигация. Когда в узкой колонке они
-   не помещаются в строку, навигация переносится ниже и остаётся прижатой вправо. */
+/* Шапка карточки: счётчик, под ним навигация, прижатая вправо. Навигация
+   всегда своей строкой — по ширине колонки она в строку со счётчиком не влезает,
+   а самопроизвольный перенос сдвигал кнопки на 26 пикселей от вопроса к вопросу. */
 .q-head{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;margin-bottom:10px}
 .q-head .q-count{margin:0}
-.q-nav-head{margin:0 0 0 auto;gap:6px}
+.q-nav-head{flex:0 0 100%;justify-content:flex-end;margin:0;gap:6px}
 .q-nav-head .q-btn{padding:5px 10px;font-size:11px}
 .q-actions{margin-top:auto;position:sticky;bottom:0;padding:12px 0 0;background:var(--asphalt);
   display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .q-actions .ai{margin:0}
 @media(max-width:760px){
-  /* на телефоне страница скроллится целиком, фиксированная высота только мешает */
-  .q-side{height:auto;overflow:visible}
+  /* на телефоне страница скроллится целиком, потолок высоты только мешает */
+  .q-side{max-height:none;overflow:visible}
   .q-actions{position:static}
 }
 .q-count{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--steel);margin-bottom:10px}
@@ -1632,7 +1629,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v84";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v88";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
