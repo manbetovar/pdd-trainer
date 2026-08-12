@@ -1,5 +1,5 @@
 /* ПДД-тренажёр: офлайн-кэш. Всё зашито в два html — кэшируем целиком. */
-var CACHE = "pdd-v60";
+var CACHE = "pdd-v63";
 var ASSETS = [
   "./",
   "./index.html",
@@ -37,7 +37,11 @@ self.addEventListener("activate", function (e) {
    Данные (шарды картинок, иконки) читаем из кэша: они большие и меняются
    только вместе с версией кэша. */
 function networkFirst(request) {
-  return fetch(request).then(function (resp) {
+  /* cache:"no-cache" обязателен: GitHub Pages отдаёт html с max-age=600, и
+     обычный fetch внутри worker'а десять минут получал старую копию из
+     HTTP-кэша браузера — сеть вперёд кэша не работала. Теперь запрос всегда
+     идёт с проверкой ETag: не изменилось — 304 и ничего не качаем. */
+  return fetch(new Request(request.url, { cache: "no-cache" })).then(function (resp) {
     var copy = resp.clone();
     caches.open(CACHE).then(function (c) { c.put(request, copy); });
     return resp;

@@ -193,15 +193,26 @@ a{color:inherit}
 .ai{border-top:1px solid var(--hair-d);margin-top:14px;padding-top:12px}
 .ai-toggle{font-family:"Oswald","Golos Text",sans-serif;font-size:12px;letter-spacing:.08em;text-transform:uppercase;background:transparent;color:var(--yellow);border:1px solid rgba(240,192,32,.4);padding:8px 14px;border-radius:var(--r-sm);cursor:pointer}
 .ai-toggle:hover{border-color:var(--yellow)}
-#aiDrawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:60;
+/* Ширину чата тянут за левый край; значение живёт в переменной, чтобы отступ
+   контента и сама панель всегда совпадали. */
+:root{--ai-w:420px}
+#aiDrawer{position:fixed;top:0;right:0;bottom:0;width:min(var(--ai-w),100vw);z-index:60;
   background:var(--asphalt);border-left:1px solid var(--hair-d);
   box-shadow:-16px 0 48px rgba(0,0,0,.35);padding:16px 18px;
   display:flex;flex-direction:column;transform:translateX(105%);transition:transform .25s ease;color:var(--line)}
 body.ai-open #aiDrawer{transform:none}
 @media(min-width:1280px){
   .shell{transition:padding-right .25s ease}
-  body.ai-open .shell{padding-right:420px}
+  body.ai-open .shell{padding-right:var(--ai-w)}
 }
+.ai-resize{position:absolute;left:0;top:0;bottom:0;width:10px;margin-left:-5px;cursor:col-resize;
+  z-index:2;touch-action:none;display:flex;align-items:center;justify-content:center}
+.ai-resize::before{content:"";width:2px;height:44px;border-radius:2px;background:var(--hair-d);transition:background .15s}
+.ai-resize:hover::before,.ai-resize:focus-visible::before,body.ai-resizing .ai-resize::before{background:var(--yellow)}
+.ai-resize:focus{outline:none}
+body.ai-resizing{user-select:none;cursor:col-resize}
+body.ai-resizing #aiDrawer,body.ai-resizing .shell{transition:none}
+@media(max-width:999px){.ai-resize{display:none}}
 .ai-head{display:flex;align-items:flex-start;gap:10px;border-bottom:1px solid var(--hair-d);padding-bottom:12px;margin-bottom:12px}
 .ai-ctx{font-size:11.5px;color:var(--steel);margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .ai-close{margin-left:auto;background:none;border:none;color:var(--steel-3);font-size:16px;cursor:pointer;padding:4px}
@@ -466,6 +477,8 @@ footer{padding:52px 0 72px;color:var(--muted);font-size:13px;max-width:70ch}
 <button class="ai-edge" id="aiEdge" aria-label="Открыть разбор с ИИ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2.3-2.7A8 8 0 1 1 21 12Z"/></svg><span class="ai-edge-label">Разбор с ИИ</span></button>
 
 <aside id="aiDrawer" aria-label="Обсуждение с ИИ">
+  <div class="ai-resize" id="aiResize" role="separator" aria-orientation="vertical" tabindex="0"
+       aria-label="Ширина чата: тяни мышью или стрелками влево-вправо" title="Потяни, чтобы расширить чат"></div>
   <button class="ai-handle" id="aiHandle" aria-label="Свернуть чат"><i></i></button>
   <div class="ai-head">
     <div class="ai-head-text">
@@ -1071,7 +1084,8 @@ var STORAGE_KEYS = {
   progress: "pdd-progress-v2",
   view: "pdd-view",
   mediaPref: "pdd-media-pref",
-  aiCfg: "pdd-ai-cfg"
+  aiCfg: "pdd-ai-cfg",
+  aiWidth: "pdd-ai-width"
 };
 
 function lsGet(key, fallback) {
@@ -1581,7 +1595,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v60";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v63";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2222,8 +2236,15 @@ function initRefbook() {
 
 var AI_PRESETS = {
   anthropic: {
-    base: "https://api.anthropic.com", format: "anthropic", model: "claude-haiku-4-5", fixed: 1,
-    hint: 'Модель — Claude Haiku 4.5. Ключ: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>, ~500 разборов на доллар. Ключ хранится только в этом браузере.'
+    base: "https://api.anthropic.com", format: "anthropic", model: "claude-haiku-4-5",
+    models: [
+      { id: "claude-haiku-4-5", label: "Haiku 4.5 — дешёвая, по умолчанию" },
+      { id: "claude-sonnet-5", label: "Sonnet 5 — заметно умнее, дороже" },
+      { id: "claude-opus-5", label: "Opus 5 — самая сильная, самая дорогая" }
+    ],
+    /* Замер: на 20 вопросах, где Haiku ошибается даже с полным контекстом,
+       Sonnet берёт 14. Поэтому выбор вернули, а Haiku осталась по умолчанию. */
+    hint: 'Ключ: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Haiku — примерно 500 разборов на доллар; Sonnet дороже, но вытягивает сложные вопросы про очерёдность. Ключ хранится только в этом браузере.'
   },
   zai: {
     base: "https://api.z.ai/api/anthropic", format: "anthropic", model: "glm-4.5-flash",
@@ -2372,6 +2393,67 @@ function aiOpenDrawer() {
 
 function aiCloseDrawer() { document.body.classList.remove("ai-open"); }
 
+/* ── ширина чата ──────────────────────────────────────────────
+   Ответы про очерёдность длинные, в 420px они превращаются в лапшу.
+   Ширину тянут за левый край панели и она запоминается. */
+var AI_W_MIN = 320;
+
+function aiMaxWidth() { return Math.max(AI_W_MIN, Math.round(window.innerWidth * 0.8)); }
+
+function aiSetWidth(px, save) {
+  var w = Math.min(aiMaxWidth(), Math.max(AI_W_MIN, Math.round(px)));
+  document.documentElement.style.setProperty("--ai-w", w + "px");
+  if (save) lsSet(STORAGE_KEYS.aiWidth, String(w));
+  return w;
+}
+
+function initAiResize() {
+  var saved = parseInt(lsGet(STORAGE_KEYS.aiWidth, ""), 10);
+  if (saved > 0) aiSetWidth(saved, false);
+
+  var grip = $("aiResize"), start = 0, startW = 0;
+
+  function move(e) {
+    var x = e.touches ? e.touches[0].clientX : e.clientX;
+    aiSetWidth(startW + (start - x), false);
+  }
+  function stop() {
+    document.body.classList.remove("ai-resizing");
+    document.removeEventListener("mousemove", move);
+    document.removeEventListener("touchmove", move);
+    document.removeEventListener("mouseup", stop);
+    document.removeEventListener("touchend", stop);
+    lsSet(STORAGE_KEYS.aiWidth, String($("aiDrawer").getBoundingClientRect().width | 0));
+  }
+  function begin(e) {
+    start = e.touches ? e.touches[0].clientX : e.clientX;
+    startW = $("aiDrawer").getBoundingClientRect().width;
+    document.body.classList.add("ai-resizing");
+    document.addEventListener("mousemove", move);
+    document.addEventListener("touchmove", move, { passive: true });
+    document.addEventListener("mouseup", stop);
+    document.addEventListener("touchend", stop);
+    e.preventDefault();
+  }
+  grip.addEventListener("mousedown", begin);
+  grip.addEventListener("touchstart", begin, { passive: false });
+
+  /* с клавиатуры тоже: панель — часть интерфейса, а не только мышиный элемент */
+  grip.addEventListener("keydown", function (e) {
+    var cur = $("aiDrawer").getBoundingClientRect().width;
+    if (e.key === "ArrowLeft") { aiSetWidth(cur + 40, true); e.preventDefault(); }
+    if (e.key === "ArrowRight") { aiSetWidth(cur - 40, true); e.preventDefault(); }
+  });
+
+  /* двойной клик — вернуть исходную ширину */
+  grip.addEventListener("dblclick", function () { aiSetWidth(420, true); });
+
+  /* окно уменьшили — панель не должна вылезать за экран */
+  window.addEventListener("resize", function () {
+    aiSetWidth($("aiDrawer").getBoundingClientRect().width, false);
+  });
+}
+
 function aiOpenRef(key) {
   aiQid = key;
   var ctx = $("aiCtx");
@@ -2467,6 +2549,7 @@ function initAi() {
     if (document.body.classList.contains("ai-open")) { aiCloseDrawer(); aiShowRightPane(); }
     else aiOpenDrawer();
   };
+  initAiResize();
   $("aiEdge").onclick = aiOpenDrawer;
   $("aiClose").onclick = aiCloseDrawer;
   $("aiHandle").onclick = aiCloseDrawer;
