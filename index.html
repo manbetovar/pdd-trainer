@@ -1595,7 +1595,7 @@ var $$ = function (sel, root) {
 
 /* ── состояние ────────────────────────────────────────────────── */
 
-var APP_VERSION="pdd-v68";           /* подставляется сборкой PWA; в монолите остаётся dev */
+var APP_VERSION="pdd-v72";           /* подставляется сборкой PWA; в монолите остаётся dev */
 var MODES;                       /* [TOPICS, TICKETS] — заполняется в initApp */
 var cur = { m: 0, g: 0, i: 0 };  /* режим, группа, индекс вопроса */
 var progress = {};               /* {qid: индекс выбранного ответа} */
@@ -2691,8 +2691,35 @@ function initProgressIO() {
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
       .then(function (reg) { reg.update(); })
       .catch(function () {});
+    checkFreshness();
   }
 })();
+
+/* Страница сама сверяет свою версию с сервером.
+
+   Одних правок service worker'а не хватило: переход по ссылке иногда обслуживает
+   не worker, а HTTP-кэш браузера (GitHub Pages отдаёт html с max-age=600), и
+   человек видит прошлый деплой. Проверено живьём: через worker приходила уже
+   новая версия, в кэше лежала новая, а в DOM была старая.
+
+   Поэтому после загрузки запрашиваем страницу с проверкой ETag и, если версия
+   разошлась, перезагружаемся один раз. Флаг в sessionStorage не даёт зациклиться,
+   если сервер почему-то отдаёт разное. */
+function checkFreshness(reload) {
+  if (APP_VERSION === "dev") return;                 /* монолит, версии нет */
+  /* Метку ставим по ТЕКУЩЕЙ версии: «находясь на ней, перезагрузку уже пробовали».
+     Иначе, если сервер почему-то продолжает отдавать другое, страница зациклится. */
+  if (sessionStorage.getItem("pdd-reloaded") === APP_VERSION) return;
+  fetch("index.html", { cache: "no-cache" })
+    .then(function (r) { return r.text(); })
+    .then(function (html) {
+      var m = html.match(/var APP_VERSION="(pdd-v\d+)"/);
+      if (!m || m[1] === APP_VERSION) return;
+      sessionStorage.setItem("pdd-reloaded", APP_VERSION);
+      (reload || location.reload.bind(location))();
+    })
+    .catch(function () {});
+}
 </script>
 </body>
 </html>
